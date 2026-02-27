@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Carrera</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>Gestión de Carrera</h1>
+            <p>Evalúa tus dimensiones profesionales</p>
+        </header>
+
+        <main>
+            {% block content %}{% endblock %}
+        </main>
+
+        <footer>
+            <p style="text-align: center; color: #888; margin-top: 40px; font-size: 12px;">&copy; 2026 Gestión de
+                Carrera App Powered by TitoML</p>
+        </footer>
+    </div>
+</body>
+
+</html>

@@ -1,0 +1,46 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div style="text-align: center;">
+    <h2>Tus Resultados</h2>
+    <p>Hola <strong>{{ name }}</strong>, aquí está tu análisis.</p>
+</div>
+
+<div class="charts-container">
+    <div class="chart-box">
+        <h3>Gráfico Radial</h3>
+        <img src="data:image/png;base64,{{ radar_chart }}" alt="Radar Chart">
+    </div>
+    <div class="chart-box">
+        <h3>Gráfico de Barras</h3>
+        <img src="data:image/png;base64,{{ bar_chart }}" alt="Bar Chart">
+    </div>
+</div>
+
+<h3>Detalle por Dimensión</h3>
+<table class="score-table">
+    <thead>
+        <tr>
+            <th>Dimensión</th>
+            <th>Puntaje (Max 30)</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for dim, score in scores.items() %}
+        <tr>
+            <td>{{ dim }}</td>
+            <td>{{ score }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<div style="text-align: center; margin-top: 30px;">
+    <a href="{{ url_for('download_pdf') }}" class="btn">📥 Descargar Informe PDF</a>
+    <a href="{{ url_for('send_email_route') }}" class="btn" style="margin-left: 10px;">📧 Enviar por Correo</a>
+</div>
+
+<div style="text-align: center; margin-top: 20px;">
+    <a href="{{ url_for('index') }}" style="color: #666; text-decoration: none;">Volver al inicio</a>
+</div>
+{% endblock %}

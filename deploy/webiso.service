@@ -1,0 +1,17 @@
+[Unit]
+Description=Gunicorn instance to serve WebISO App
+After=network.target
+
+[Service]
+# User matches the AWS Ubuntu default
+User={{USER}}
+Group={{GROUP}}
+# Path provided by user
+WorkingDirectory={{APP_DIR}}
+Environment="PATH={{APP_DIR}}/venv/bin"
+# ExecStart points to the venv gunicorn and config
+ExecStart={{APP_DIR}}/venv/bin/gunicorn --config deploy/gunicorn_config.py app:app
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
