@@ -7,7 +7,7 @@ const Home = () => {
             <section style={{ textAlign: 'center', padding: '4rem 0' }}>
                 <h1 style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>Sistema de Gestión Integrado</h1>
                 <p style={{ fontSize: '1.25rem', color: 'var(--color-text-muted)', marginBottom: '2rem' }}>
-                    Bienvenido al portal de documentación de procesos y normativas ISO 9001 / ISO 27001 de Datacom.
+                    Bienvenido al portal de documentación de procesos y normativas ISO 9001 / ISO 27001 de DataCom.
                 </p>
                 <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
                     <Link to="/process-map" className="btn-primary" style={{

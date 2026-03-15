@@ -5,7 +5,7 @@ const Footer = () => {
     return (
         <footer className="footer">
             <div className="container">
-                <p>&copy; {new Date().getFullYear()} Datacom. Sistema de Gestión Integrado ISO 9001 / ISO 27001.</p>
+                <p>&copy; {new Date().getFullYear()} DataCom. Sistema de Gestión Integrado ISO 9001 / ISO 27001.</p>
             </div>
         </footer>
     );

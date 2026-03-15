@@ -50,7 +50,7 @@ const ProcessMap = () => {
             <div className="process-content">
                 <div className="map-header">
                     <div style={{ width: 100 }}>{/* Spacer */}</div>
-                    <div className="map-title">MACROPROCESO DATACOM</div>
+                    <div className="map-title">MACROPROCESO DataCom</div>
                     <div className="map-meta">
                         Versión 1.0<br />
                         Fecha: 12/02/2026<br />
@@ -140,15 +140,15 @@ const ProcessMap = () => {
                 <div className="signatures-row">
                     <div className="signature-box">
                         <div className="signature-header">Aprobado por:</div>
-                        <div>Cesar Cobo<br />Gerente General<br />DATACOM</div>
+                        <div>Cesar Cobo<br />Gerente General<br />DataCom</div>
                     </div>
                     <div className="signature-box">
                         <div className="signature-header">Revisado por:</div>
-                        <div>Sofia Cabrera<br />Representante de Calidad SIGC-SI<br />DATACOM</div>
+                        <div>Sofia Cabrera<br />Representante de Calidad SIGC-SI<br />DataCom</div>
                     </div>
                     <div className="signature-box">
                         <div className="signature-header">Elaborado por:</div>
-                        <div>Marco Logacho<br />Oficial de Calidad SIGC-SI<br />DATACOM</div>
+                        <div>Marco Logacho<br />Oficial de Calidad SIGC-SI<br />DataCom</div>
                     </div>
                 </div>
 
