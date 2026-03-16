@@ -1,16 +1,51 @@
-# React + Vite
+# WebISO / ERP DataCom
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Portal React + Vite para documentacion ISO y acceso ERP DataCom. El proyecto funciona como frontend estatico servido por Nginx y actualmente integra acceso centralizado a CRM, DAIA, Prospeccion y Acta de Reuniones.
 
-Currently, two official plugins are available:
+## Resumen operativo
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- Frontend: React 19 + Vite 7
+- Publicacion productiva conocida: `/var/www/webiso`
+- Fuente operativa conocida en servidor: `/home/marco/webiso`
+- Puerto observado para WebISO: `8081`
+- Acceso ERP: autenticacion central desde WebISO contra CRM DataCom
 
-## React Compiler
+## Comandos utiles
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- `npm run dev`: desarrollo local
+- `npm run build`: genera `dist/`
+- `scripts/bootstrap_server.sh`: instala dependencias base del servidor
+- `scripts/deploy_webiso.sh`: construye y publica WebISO
+- `scripts/backup_db.sh`: genera respaldo de base de datos y media si aplica
+- `scripts/restore_db.sh`: restaura respaldos
 
-## Expanding the ESLint configuration
+## Recuperacion rapida
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+La informacion critica para reconstruir la aplicacion y el entorno esta en:
+
+- `docs/disaster-recovery.md`
+- `docs/server-inventory.md`
+- `docs/validation-checklist.md`
+- `.env.example`
+
+## Flujo recomendado de despliegue
+
+1. Clonar el repositorio.
+2. Copiar `.env.example` a `.env` y ajustar valores reales.
+3. Ejecutar `scripts/bootstrap_server.sh` en el servidor.
+4. Ejecutar `scripts/deploy_webiso.sh` desde el root del proyecto.
+5. Verificar con `docs/validation-checklist.md`.
+
+## Dependencias recomendadas
+
+- Node.js 20
+- npm 10+
+- Nginx
+- rsync
+- Python 3.10+ para scripts auxiliares y legado Flask
+
+## Notas
+
+- Este repositorio no almacena secretos reales.
+- Secretos, credenciales y respaldos sensibles deben mantenerse fuera de Git.
+- Si el mismo servidor aloja CRM u otras apps con datos persistentes, respalda tambien sus bases y directorios de media.
