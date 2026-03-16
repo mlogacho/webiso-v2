@@ -1,0 +1,128 @@
+.erp-admin-page {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 2rem 1rem 3rem;
+}
+
+.erp-admin-header h1 {
+    margin-bottom: 0.4rem;
+}
+
+.erp-admin-header p {
+    color: var(--color-text-muted);
+}
+
+.erp-admin-error {
+    margin: 1rem 0;
+    background: #ffe9e9;
+    color: #b00020;
+    border: 1px solid #ffbcbc;
+    border-radius: 10px;
+    padding: 0.75rem;
+}
+
+.erp-admin-loading {
+    margin: 1rem 0;
+    color: var(--color-dark-blue);
+    font-weight: 600;
+}
+
+.erp-admin-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.2rem;
+    margin-top: 1.2rem;
+}
+
+.erp-admin-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 14px;
+    box-shadow: var(--shadow-sm);
+    padding: 1rem;
+}
+
+.erp-admin-card h2 {
+    margin-bottom: 0.8rem;
+}
+
+.erp-admin-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+}
+
+.erp-admin-form label {
+    font-size: 0.9rem;
+    color: var(--color-dark-blue);
+    font-weight: 600;
+}
+
+.erp-admin-form input,
+.erp-admin-form select {
+    border: 1px solid var(--color-border);
+    border-radius: 9px;
+    padding: 0.6rem 0.7rem;
+}
+
+.erp-admin-form button {
+    margin-top: 0.55rem;
+    border: none;
+    background: var(--color-primary-blue);
+    color: #fff;
+    border-radius: 9px;
+    padding: 0.65rem 0.8rem;
+    font-weight: 700;
+}
+
+.erp-admin-checklist {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.4rem;
+    border: 1px solid var(--color-border);
+    border-radius: 9px;
+    padding: 0.65rem;
+    margin-top: 0.3rem;
+}
+
+.erp-admin-checklist label {
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+}
+
+.erp-admin-list {
+    margin-top: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    max-height: 310px;
+    overflow: auto;
+}
+
+.erp-admin-list button {
+    border: 1px solid var(--color-border);
+    background: #f8fbff;
+    text-align: left;
+    border-radius: 9px;
+    padding: 0.55rem 0.6rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.erp-admin-list span {
+    color: var(--color-text-muted);
+    font-size: 0.86rem;
+}
+
+@media (max-width: 1000px) {
+    .erp-admin-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .erp-admin-checklist {
+        grid-template-columns: 1fr;
+    }
+}

@@ -1,13 +1,16 @@
 import React from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { Menu, X, ShieldCheck, Map, Smartphone } from 'lucide-react';
+import { useERPAuth } from '../context/ERPAuthContext';
 import logo from '../assets/logo.png';
 import './Header.css';
 
 const Header = () => {
     const [isMenuOpen, setIsMenuOpen] = React.useState(false);
+    const { authToken, userInfo, hasPermission } = useERPAuth();
 
     const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
+    const canViewAdmin = Boolean(authToken && (userInfo?.is_superuser || hasPermission('erp_admin')));
 
     return (
         <header className="header">
@@ -22,6 +25,9 @@ const Header = () => {
                     <NavLink to="/iso-9001" onClick={() => setIsMenuOpen(false)} className={({ isActive }) => isActive ? 'active' : ''}>ISO 9001</NavLink>
                     <NavLink to="/iso-27001" onClick={() => setIsMenuOpen(false)} className={({ isActive }) => isActive ? 'active' : ''}>ISO 27001</NavLink>
                     <NavLink to="/erp-datacom" onClick={() => setIsMenuOpen(false)} className={({ isActive }) => isActive ? 'active' : ''}>ERP DataCom</NavLink>
+                    {canViewAdmin && (
+                        <NavLink to="/erp-admin" onClick={() => setIsMenuOpen(false)} className={({ isActive }) => isActive ? 'active' : ''}>Admin ERP</NavLink>
+                    )}
                 </nav>
 
                 <button className="mobile-menu-btn" onClick={toggleMenu} aria-label="Toggle menu">
