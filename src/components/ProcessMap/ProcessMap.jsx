@@ -1,5 +1,5 @@
 import React from 'react';
-import { Download, FileSpreadsheet, FileText, Save, ShieldCheck, Trash2, Upload } from 'lucide-react';
+import { Download, FileSpreadsheet, FileText, Trash2, Upload } from 'lucide-react';
 import Modal from '../Modal';
 import {
     deleteDocument,
@@ -27,6 +27,13 @@ const iconForType = (docType) => (docType === 'process' || docType === 'work-ins
 const createInitialUploadState = () => Object.fromEntries(
     DOCUMENT_TYPES.map((documentType) => [documentType.id, { files: [], standards: ['iso9001'] }])
 );
+
+const SUMMARY_LABELS = {
+    process: 'PROCESO',
+    'work-instruction': 'INSTRUCCIONES DE TRABAJO',
+    'risk-matrix': 'MATRIZ DE RIESGO',
+    'management-indicator': 'KPI'
+};
 
 const ProcessMap = () => {
     const [selectedProcess, setSelectedProcess] = React.useState(null);
@@ -143,6 +150,14 @@ const ProcessMap = () => {
         window.open(getDocumentUrl(document.id), '_blank', 'noopener,noreferrer');
     };
 
+    const documentSummary = React.useMemo(() => {
+        return DOCUMENT_TYPES.map((documentType) => ({
+            id: documentType.id,
+            label: SUMMARY_LABELS[documentType.id] || documentType.label.toUpperCase(),
+            items: documents.filter((document) => document.docType === documentType.id)
+        }));
+    }, [documents]);
+
     return (
         <div className="process-map-container">
             <Modal
@@ -162,6 +177,26 @@ const ProcessMap = () => {
                         </div>
                         {feedback && <div className="process-documents-panel__feedback">{feedback}</div>}
                     </div>
+
+                    <section className="process-summary-card">
+                        <h5>Resumen de documentacion cargada</h5>
+                        <div className="process-summary-grid">
+                            {documentSummary.map((summaryItem) => (
+                                <div key={summaryItem.id} className="process-summary-item">
+                                    <strong>{summaryItem.label}:</strong>
+                                    {summaryItem.items.length > 0 ? (
+                                        <ul>
+                                            {summaryItem.items.map((document) => (
+                                                <li key={document.id}>{document.fileName}</li>
+                                            ))}
+                                        </ul>
+                                    ) : (
+                                        <span>No cargado</span>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </section>
 
                     <div className="process-documents-grid">
                         {DOCUMENT_TYPES.map((documentType) => {
