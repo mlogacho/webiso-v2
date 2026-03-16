@@ -1,10 +1,215 @@
-from flask import Flask, render_template, request, redirect, url_for, session, send_file, flash
+from flask import Flask, render_template, request, redirect, url_for, session, send_file, flash, jsonify
 import questions
 from services import charts, report_generator, email_service
 import os
+import json
+import sqlite3
+import uuid
+from datetime import datetime, timezone
+from pathlib import Path
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 app.secret_key = 'supersecretkey' # Change this for production
+
+# ── Document management storage ──────────────────────────────────────────────
+UPLOADS_DIR = Path(__file__).parent / 'uploads'
+UPLOADS_DIR.mkdir(exist_ok=True)
+
+DB_PATH = Path(__file__).parent / 'uploads.db'
+MAX_FILE_MB = 50
+ALLOWED_EXTENSIONS = {'.pdf', '.xlsx', '.xls'}
+VALID_DOC_TYPES = {'process', 'risk-matrix', 'work-instruction', 'management-indicator'}
+VALID_STANDARDS = {'iso9001', 'iso27001'}
+
+app.config['MAX_CONTENT_LENGTH'] = MAX_FILE_MB * 1024 * 1024
+
+
+def _get_db():
+    conn = sqlite3.connect(str(DB_PATH))
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+def _init_db():
+    with _get_db() as conn:
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS documents (
+                id           TEXT PRIMARY KEY,
+                process_name TEXT NOT NULL,
+                doc_type     TEXT NOT NULL,
+                standards    TEXT NOT NULL,
+                file_name    TEXT NOT NULL,
+                file_size    INTEGER NOT NULL,
+                content_type TEXT NOT NULL,
+                storage_path TEXT NOT NULL,
+                uploaded_at  TEXT NOT NULL
+            )
+        ''')
+
+
+_init_db()
+
+
+def _row_to_dict(row):
+    """Convert a DB row to a camelCase dict safe for JSON responses."""
+    return {
+        'id':          row['id'],
+        'processName': row['process_name'],
+        'docType':     row['doc_type'],
+        'standards':   json.loads(row['standards']),
+        'fileName':    row['file_name'],
+        'size':        row['file_size'],
+        'uploadedAt':  row['uploaded_at'],
+    }
+
+
+# ── Document API endpoints ───────────────────────────────────────────────────
+
+@app.route('/api/documents', methods=['GET'])
+def api_list_documents():
+    process_filter = request.args.get('process', '').strip()
+    standard_filter = request.args.get('standard', '').strip()
+
+    with _get_db() as conn:
+        rows = conn.execute('SELECT * FROM documents ORDER BY uploaded_at DESC').fetchall()
+
+    results = []
+    for row in rows:
+        doc = _row_to_dict(row)
+        if process_filter and doc['processName'] != process_filter:
+            continue
+        if standard_filter and standard_filter not in doc['standards']:
+            continue
+        results.append(doc)
+
+    return jsonify(results)
+
+
+@app.route('/api/documents', methods=['POST'])
+def api_upload_document():
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file attached'}), 400
+
+    uploaded_file = request.files['file']
+    process_name  = request.form.get('process_name', '').strip()
+    doc_type      = request.form.get('doc_type', '').strip()
+    standards_raw = request.form.get('standards', '[]')
+    replace_flag  = request.form.get('replace', 'false').lower() == 'true'
+
+    if not uploaded_file.filename or not process_name or not doc_type:
+        return jsonify({'error': 'Faltan campos requeridos'}), 400
+
+    if doc_type not in VALID_DOC_TYPES:
+        return jsonify({'error': 'Tipo de documento no valido'}), 400
+
+    safe_name = secure_filename(uploaded_file.filename)
+    ext = Path(safe_name).suffix.lower()
+    if ext not in ALLOWED_EXTENSIONS:
+        return jsonify({'error': f'Extension no permitida: {ext}'}), 400
+
+    try:
+        standards = json.loads(standards_raw)
+        if not isinstance(standards, list):
+            raise ValueError
+        if not all(s in VALID_STANDARDS for s in standards):
+            raise ValueError
+    except (ValueError, json.JSONDecodeError):
+        return jsonify({'error': 'Standards invalidos'}), 400
+
+    doc_id           = str(uuid.uuid4())
+    storage_filename = f'{doc_id}{ext}'
+    storage_path     = UPLOADS_DIR / storage_filename
+    uploaded_file.save(str(storage_path))
+    file_size = storage_path.stat().st_size
+    now       = datetime.now(timezone.utc).isoformat()
+
+    with _get_db() as conn:
+        if replace_flag:
+            # Fetch existing docs to remove their files from disk
+            existing = conn.execute(
+                'SELECT storage_path FROM documents WHERE process_name = ? AND doc_type = ?',
+                (process_name, doc_type)
+            ).fetchall()
+            for old_row in existing:
+                old_file = UPLOADS_DIR / old_row['storage_path']
+                try:
+                    old_file.unlink(missing_ok=True)
+                except OSError:
+                    pass
+            conn.execute(
+                'DELETE FROM documents WHERE process_name = ? AND doc_type = ?',
+                (process_name, doc_type)
+            )
+
+        conn.execute(
+            '''INSERT INTO documents
+                   (id, process_name, doc_type, standards, file_name, file_size, content_type, storage_path, uploaded_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+            (doc_id, process_name, doc_type, json.dumps(standards),
+             safe_name, file_size, uploaded_file.content_type or 'application/octet-stream',
+             storage_filename, now)
+        )
+
+    with _get_db() as conn:
+        row = conn.execute('SELECT * FROM documents WHERE id = ?', (doc_id,)).fetchone()
+    return jsonify(_row_to_dict(row)), 201
+
+
+@app.route('/api/documents/<doc_id>', methods=['PATCH'])
+def api_update_document(doc_id):
+    data      = request.get_json(silent=True) or {}
+    standards = data.get('standards', [])
+
+    if not isinstance(standards, list) or not all(s in VALID_STANDARDS for s in standards):
+        return jsonify({'error': 'Standards invalidos'}), 400
+
+    with _get_db() as conn:
+        result = conn.execute(
+            'UPDATE documents SET standards = ? WHERE id = ?',
+            (json.dumps(standards), doc_id)
+        )
+        if result.rowcount == 0:
+            return jsonify({'error': 'Documento no encontrado'}), 404
+
+    return jsonify({'id': doc_id, 'standards': standards})
+
+
+@app.route('/api/documents/<doc_id>', methods=['DELETE'])
+def api_delete_document(doc_id):
+    with _get_db() as conn:
+        row = conn.execute('SELECT storage_path FROM documents WHERE id = ?', (doc_id,)).fetchone()
+        if not row:
+            return jsonify({'error': 'Documento no encontrado'}), 404
+        storage_path = UPLOADS_DIR / row['storage_path']
+        conn.execute('DELETE FROM documents WHERE id = ?', (doc_id,))
+
+    try:
+        storage_path.unlink(missing_ok=True)
+    except OSError:
+        pass
+
+    return '', 204
+
+
+@app.route('/api/documents/<doc_id>/file', methods=['GET'])
+def api_serve_document(doc_id):
+    with _get_db() as conn:
+        row = conn.execute('SELECT * FROM documents WHERE id = ?', (doc_id,)).fetchone()
+    if not row:
+        return jsonify({'error': 'Documento no encontrado'}), 404
+
+    storage_path = UPLOADS_DIR / row['storage_path']
+    if not storage_path.exists():
+        return jsonify({'error': 'Archivo no encontrado en disco'}), 404
+
+    return send_file(
+        str(storage_path),
+        mimetype=row['content_type'],
+        as_attachment=False,
+        download_name=row['file_name']
+    )
+
 
 @app.route('/')
 def index():

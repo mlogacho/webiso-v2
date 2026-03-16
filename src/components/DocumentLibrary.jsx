@@ -7,6 +7,7 @@ import {
     formatFileSize,
     getAllDocuments,
     getDocumentTypeLabel,
+    getDocumentUrl,
     processDocumentsUpdatedEvent
 } from '../utils/processDocuments';
 import './DocumentLibrary.css';
@@ -52,9 +53,7 @@ const DocumentLibrary = ({ standardId, title, description }) => {
     });
 
     const openDocument = (document) => {
-        const url = URL.createObjectURL(document.file);
-        window.open(url, '_blank', 'noopener,noreferrer');
-        window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+        window.open(getDocumentUrl(document.id), '_blank', 'noopener,noreferrer');
     };
 
     return (

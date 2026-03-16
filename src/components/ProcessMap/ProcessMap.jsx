@@ -8,6 +8,7 @@ import {
     formatFileSize,
     getDocumentTypeLabel,
     getDocumentsForProcess,
+    getDocumentUrl,
     ISO_STANDARDS,
     processDocumentsUpdatedEvent,
     saveDocuments,
@@ -139,9 +140,7 @@ const ProcessMap = () => {
     };
 
     const openDocument = (document) => {
-        const url = URL.createObjectURL(document.file);
-        window.open(url, '_blank', 'noopener,noreferrer');
-        window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+        window.open(getDocumentUrl(document.id), '_blank', 'noopener,noreferrer');
     };
 
     return (
