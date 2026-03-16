@@ -59,6 +59,10 @@
     line-height: 1.6;
 }
 
+.modal-content.modal-content--wide {
+    max-width: 980px;
+}
+
 @keyframes fadeIn {
     from {
         opacity: 0;
