@@ -19,6 +19,19 @@ Portal React + Vite para documentacion ISO y acceso ERP DataCom. El proyecto fun
 - `scripts/backup_db.sh`: genera respaldo de base de datos y media si aplica
 - `scripts/restore_db.sh`: restaura respaldos
 
+## GitHub Actions
+
+El repositorio incluye el workflow `.github/workflows/build-and-artifacts.yml` que se ejecuta en:
+
+- `push` a `main`
+- `pull_request`
+- ejecucion manual con `workflow_dispatch`
+
+El workflow genera dos artefactos descargables desde GitHub Actions:
+
+- `webiso-dist-<sha>`: contenido compilado de `dist/`
+- `webiso-deploy-bundle-<sha>`: paquete `.tar.gz` con `dist`, docs, scripts y configuraciones de despliegue
+
 ## Recuperacion rapida
 
 La informacion critica para reconstruir la aplicacion y el entorno esta en:

@@ -1,0 +1,58 @@
+name: Build and Deployment Artifacts
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build WebISO
+        run: npm run build
+
+      - name: Create deployment bundle
+        run: |
+          mkdir -p artifacts
+          tar -czf artifacts/webiso-deploy-bundle.tar.gz \
+            dist \
+            debian_deployment \
+            deploy \
+            docs \
+            scripts \
+            .env.example \
+            package.json \
+            package-lock.json \
+            README.md
+
+      - name: Upload built dist artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: webiso-dist-${{ github.sha }}
+          path: dist
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload deployment bundle artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: webiso-deploy-bundle-${{ github.sha }}
+          path: artifacts/webiso-deploy-bundle.tar.gz
+          if-no-files-found: error
+          retention-days: 30
