@@ -1,6 +1,6 @@
 import React from 'react';
-import { Link, NavLink } from 'react-router-dom';
-import { Menu, X, ShieldCheck, Map, Smartphone } from 'lucide-react';
+import { NavLink } from 'react-router-dom';
+import { Menu, X } from 'lucide-react';
 import { useERPAuth } from '../context/ERPAuthContext';
 import logo from '../assets/logo.png';
 import './Header.css';
