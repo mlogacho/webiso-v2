@@ -1,5 +1,5 @@
 import React from 'react';
-import { Download, FileSpreadsheet, FileText, Trash2, Upload } from 'lucide-react';
+import { Download, Eye, FileSpreadsheet, FileText, Trash2, Upload } from 'lucide-react';
 import Modal from '../Modal';
 import {
     deleteDocument,
@@ -150,6 +150,16 @@ const ProcessMap = () => {
         window.open(getDocumentUrl(document.id), '_blank', 'noopener,noreferrer');
     };
 
+    const downloadDocument = (document) => {
+        const link = window.document.createElement('a');
+        link.href = getDocumentUrl(document.id);
+        link.download = document.fileName;
+        link.rel = 'noopener';
+        window.document.body.appendChild(link);
+        link.click();
+        link.remove();
+    };
+
     const documentSummary = React.useMemo(() => {
         return DOCUMENT_TYPES.map((documentType) => ({
             id: documentType.id,
@@ -185,9 +195,21 @@ const ProcessMap = () => {
                                 <div key={summaryItem.id} className="process-summary-item">
                                     <strong>{summaryItem.label}:</strong>
                                     {summaryItem.items.length > 0 ? (
-                                        <ul>
+                                        <ul className="process-summary-list">
                                             {summaryItem.items.map((document) => (
-                                                <li key={document.id}>{document.fileName}</li>
+                                                <li key={document.id}>
+                                                    <span>{document.fileName}</span>
+                                                    <div className="process-summary-actions">
+                                                        <button type="button" onClick={() => openDocument(document)}>
+                                                            <Eye size={14} />
+                                                            Ver
+                                                        </button>
+                                                        <button type="button" onClick={() => downloadDocument(document)}>
+                                                            <Download size={14} />
+                                                            Descargar
+                                                        </button>
+                                                    </div>
+                                                </li>
                                             ))}
                                         </ul>
                                     ) : (
