@@ -17,6 +17,7 @@ const ERPAdmin = () => {
     const [users, setUsers] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
+    const [success, setSuccess] = useState('');
 
     const [roleForm, setRoleForm] = useState({ id: null, name: '', description: '', allowed_views: [] });
     const [userForm, setUserForm] = useState({
@@ -28,6 +29,7 @@ const ERPAdmin = () => {
         password: '',
         profile: { role: '', cedula: '', cargo: '' }
     });
+    const [assignment, setAssignment] = useState({ userId: '', roleId: '' });
 
     const canAccess = useMemo(() => {
         if (!authToken) {
@@ -66,14 +68,29 @@ const ERPAdmin = () => {
 
         setIsLoading(true);
         setError('');
+        setSuccess('');
 
         try {
             const [rolesData, usersData] = await Promise.all([
                 callApi('/api/core/roles/'),
                 callApi('/api/core/users/')
             ]);
-            setRoles(Array.isArray(rolesData) ? rolesData : []);
-            setUsers(Array.isArray(usersData) ? usersData : []);
+            const normalizedRoles = Array.isArray(rolesData) ? rolesData : [];
+            const normalizedUsers = Array.isArray(usersData) ? usersData : [];
+            setRoles(normalizedRoles);
+            setUsers(normalizedUsers);
+
+            setAssignment((previous) => {
+                const resolvedUserId = previous.userId || (normalizedUsers[0]?.id ? String(normalizedUsers[0].id) : '');
+                const selectedUser = normalizedUsers.find((user) => String(user.id) === String(resolvedUserId));
+                const selectedRole = selectedUser?.profile?.role;
+                const resolvedRoleId = previous.roleId || (selectedRole ? String(selectedRole) : '');
+
+                return {
+                    userId: resolvedUserId,
+                    roleId: resolvedRoleId
+                };
+            });
         } catch (loadError) {
             setError(loadError.message || 'No fue posible cargar administracion ERP.');
         } finally {
@@ -99,6 +116,7 @@ const ERPAdmin = () => {
     const saveRole = async (event) => {
         event.preventDefault();
         setError('');
+        setSuccess('');
 
         const payload = {
             name: roleForm.name,
@@ -120,6 +138,7 @@ const ERPAdmin = () => {
             }
 
             setRoleForm({ id: null, name: '', description: '', allowed_views: [] });
+            setSuccess('Rol ERP guardado correctamente.');
             await loadData();
         } catch (saveError) {
             setError(saveError.message || 'No fue posible guardar el rol.');
@@ -129,6 +148,7 @@ const ERPAdmin = () => {
     const saveUser = async (event) => {
         event.preventDefault();
         setError('');
+        setSuccess('');
 
         const payload = {
             username: userForm.username,
@@ -171,9 +191,77 @@ const ERPAdmin = () => {
                 password: '',
                 profile: { role: '', cedula: '', cargo: '' }
             });
+            setSuccess('Usuario ERP guardado correctamente.');
             await loadData();
         } catch (saveError) {
             setError(saveError.message || 'No fue posible guardar el usuario.');
+        }
+    };
+
+    const selectedAssignmentUser = useMemo(
+        () => users.find((user) => String(user.id) === String(assignment.userId)),
+        [users, assignment.userId]
+    );
+
+    const selectedAssignmentRole = useMemo(
+        () => roles.find((role) => String(role.id) === String(assignment.roleId)),
+        [roles, assignment.roleId]
+    );
+
+    const handleAssignmentUserChange = (nextUserId) => {
+        const selectedUser = users.find((user) => String(user.id) === String(nextUserId));
+        const userRoleId = selectedUser?.profile?.role ? String(selectedUser.profile.role) : '';
+        setAssignment({ userId: String(nextUserId), roleId: userRoleId });
+    };
+
+    const assignRoleToUser = async (event) => {
+        event.preventDefault();
+        setError('');
+        setSuccess('');
+
+        if (!assignment.userId || !assignment.roleId) {
+            setError('Selecciona un usuario CRM y un rol ERP para asignar.');
+            return;
+        }
+
+        const targetUser = users.find((user) => String(user.id) === String(assignment.userId));
+        if (!targetUser) {
+            setError('No se encontro el usuario seleccionado.');
+            return;
+        }
+
+        const payload = {
+            username: targetUser.username,
+            first_name: targetUser.first_name || '',
+            last_name: targetUser.last_name || '',
+            email: targetUser.email || '',
+            profile: {
+                ...(targetUser.profile || {}),
+                role: assignment.roleId || null,
+                cedula: targetUser.profile?.cedula || '',
+                cargo: targetUser.profile?.cargo || '',
+                birthdate: targetUser.profile?.birthdate || null,
+                civil_status: targetUser.profile?.civil_status || ''
+            }
+        };
+
+        if (typeof targetUser.is_active === 'boolean') {
+            payload.is_active = targetUser.is_active;
+        }
+        if (typeof targetUser.is_staff === 'boolean') {
+            payload.is_staff = targetUser.is_staff;
+        }
+
+        try {
+            await callApi(`/api/core/users/${targetUser.id}/`, {
+                method: 'PUT',
+                body: JSON.stringify(payload)
+            });
+
+            setSuccess(`Rol ${selectedAssignmentRole?.name || ''} asignado a ${targetUser.username}.`);
+            await loadData();
+        } catch (assignError) {
+            setError(assignError.message || 'No fue posible asignar el rol al usuario.');
         }
     };
 
@@ -197,7 +285,51 @@ const ERPAdmin = () => {
             </div>
 
             {error && <div className="erp-admin-error">{error}</div>}
+            {success && <div className="erp-admin-success">{success}</div>}
             {isLoading && <p className="erp-admin-loading">Cargando datos...</p>}
+
+            <section className="erp-admin-assign-card">
+                <h2>Asignar Rol ERP a Usuario CRM</h2>
+                <p className="erp-admin-assign-help">Selecciona un usuario de CRM DataCom y define su rol ERP para controlar accesos en DAIA, Prospeccion, CRM y Acta.</p>
+
+                <form className="erp-admin-assign-form" onSubmit={assignRoleToUser}>
+                    <label>Usuario CRM</label>
+                    <select
+                        value={assignment.userId}
+                        onChange={(event) => handleAssignmentUserChange(event.target.value)}
+                        required
+                    >
+                        <option value="">Selecciona usuario</option>
+                        {users.map((user) => (
+                            <option key={user.id} value={user.id}>
+                                {user.username} - {user.first_name} {user.last_name}
+                            </option>
+                        ))}
+                    </select>
+
+                    <label>Rol ERP</label>
+                    <select
+                        value={assignment.roleId}
+                        onChange={(event) => setAssignment((prev) => ({ ...prev, roleId: event.target.value }))}
+                        required
+                    >
+                        <option value="">Selecciona rol ERP</option>
+                        {roles.map((role) => (
+                            <option key={role.id} value={role.id}>{role.name}</option>
+                        ))}
+                    </select>
+
+                    <button type="submit">Asignar Rol ERP</button>
+                </form>
+
+                {selectedAssignmentUser && (
+                    <div className="erp-admin-assign-preview">
+                        <strong>Usuario seleccionado:</strong> {selectedAssignmentUser.username} ({selectedAssignmentUser.first_name} {selectedAssignmentUser.last_name})
+                        <br />
+                        <strong>Rol actual:</strong> {selectedAssignmentUser.profile?.role_name || 'Sin rol'}
+                    </div>
+                )}
+            </section>
 
             <div className="erp-admin-grid">
                 <section className="erp-admin-card">

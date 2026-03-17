@@ -21,6 +21,15 @@
     padding: 0.75rem;
 }
 
+.erp-admin-success {
+    margin: 1rem 0;
+    background: #e8f7ec;
+    color: #0c6b2f;
+    border: 1px solid #bfe7ca;
+    border-radius: 10px;
+    padding: 0.75rem;
+}
+
 .erp-admin-loading {
     margin: 1rem 0;
     color: var(--color-dark-blue);
@@ -32,6 +41,63 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 1.2rem;
     margin-top: 1.2rem;
+}
+
+.erp-admin-assign-card {
+    margin-top: 1rem;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 14px;
+    box-shadow: var(--shadow-sm);
+    padding: 1rem;
+}
+
+.erp-admin-assign-card h2 {
+    margin-bottom: 0.35rem;
+}
+
+.erp-admin-assign-help {
+    color: var(--color-text-muted);
+    margin-bottom: 0.85rem;
+}
+
+.erp-admin-assign-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 0.6rem;
+    align-items: end;
+}
+
+.erp-admin-assign-form label {
+    font-size: 0.9rem;
+    color: var(--color-dark-blue);
+    font-weight: 600;
+}
+
+.erp-admin-assign-form select,
+.erp-admin-assign-form button {
+    border-radius: 9px;
+    padding: 0.6rem 0.7rem;
+}
+
+.erp-admin-assign-form select {
+    border: 1px solid var(--color-border);
+}
+
+.erp-admin-assign-form button {
+    border: none;
+    background: var(--color-primary-blue);
+    color: #fff;
+    font-weight: 700;
+}
+
+.erp-admin-assign-preview {
+    margin-top: 0.85rem;
+    border: 1px dashed #c7d7f7;
+    border-radius: 9px;
+    padding: 0.75rem;
+    background: #f8fbff;
+    color: var(--color-text-main);
 }
 
 .erp-admin-card {
@@ -119,6 +185,10 @@
 
 @media (max-width: 1000px) {
     .erp-admin-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .erp-admin-assign-form {
         grid-template-columns: 1fr;
     }
 
