@@ -10,6 +10,18 @@ const ERP_PERMISSIONS = [
     { id: 'erp_admin', label: 'Modulo Administracion ERP' }
 ];
 
+const normalizeCollection = (value) => {
+    if (Array.isArray(value)) {
+        return value;
+    }
+
+    if (value && Array.isArray(value.results)) {
+        return value.results;
+    }
+
+    return [];
+};
+
 const ERPAdmin = () => {
     const { authToken, authChecked, hasPermission, userInfo, authApiBase } = useERPAuth();
 
@@ -30,6 +42,7 @@ const ERPAdmin = () => {
         profile: { role: '', cedula: '', cargo: '' }
     });
     const [assignment, setAssignment] = useState({ userId: '', roleId: '' });
+    const [assignmentUserQuery, setAssignmentUserQuery] = useState('');
 
     const canAccess = useMemo(() => {
         if (!authToken) {
@@ -75,8 +88,8 @@ const ERPAdmin = () => {
                 callApi('/api/core/roles/'),
                 callApi('/api/core/users/')
             ]);
-            const normalizedRoles = Array.isArray(rolesData) ? rolesData : [];
-            const normalizedUsers = Array.isArray(usersData) ? usersData : [];
+            const normalizedRoles = normalizeCollection(rolesData);
+            const normalizedUsers = normalizeCollection(usersData);
             setRoles(normalizedRoles);
             setUsers(normalizedUsers);
 
@@ -208,6 +221,23 @@ const ERPAdmin = () => {
         [roles, assignment.roleId]
     );
 
+    const filteredAssignmentUsers = useMemo(() => {
+        const query = assignmentUserQuery.trim().toLowerCase();
+        if (!query) {
+            return users;
+        }
+
+        return users.filter((user) => {
+            const source = [
+                user.username,
+                user.first_name,
+                user.last_name,
+                user.email
+            ].join(' ').toLowerCase();
+            return source.includes(query);
+        });
+    }, [users, assignmentUserQuery]);
+
     const handleAssignmentUserChange = (nextUserId) => {
         const selectedUser = users.find((user) => String(user.id) === String(nextUserId));
         const userRoleId = selectedUser?.profile?.role ? String(selectedUser.profile.role) : '';
@@ -293,34 +323,52 @@ const ERPAdmin = () => {
                 <p className="erp-admin-assign-help">Selecciona un usuario de CRM DataCom y define su rol ERP para controlar accesos en DAIA, Prospeccion, CRM y Acta.</p>
 
                 <form className="erp-admin-assign-form" onSubmit={assignRoleToUser}>
-                    <label>Usuario CRM</label>
-                    <select
-                        value={assignment.userId}
-                        onChange={(event) => handleAssignmentUserChange(event.target.value)}
-                        required
-                    >
-                        <option value="">Selecciona usuario</option>
-                        {users.map((user) => (
-                            <option key={user.id} value={user.id}>
-                                {user.username} - {user.first_name} {user.last_name}
-                            </option>
-                        ))}
-                    </select>
+                    <div className="erp-admin-assign-field">
+                        <label>Buscar usuario CRM</label>
+                        <input
+                            type="text"
+                            value={assignmentUserQuery}
+                            onChange={(event) => setAssignmentUserQuery(event.target.value)}
+                            placeholder="Ej: admin, juan, ventas@datacom..."
+                        />
+                    </div>
 
-                    <label>Rol ERP</label>
-                    <select
-                        value={assignment.roleId}
-                        onChange={(event) => setAssignment((prev) => ({ ...prev, roleId: event.target.value }))}
-                        required
-                    >
-                        <option value="">Selecciona rol ERP</option>
-                        {roles.map((role) => (
-                            <option key={role.id} value={role.id}>{role.name}</option>
-                        ))}
-                    </select>
+                    <div className="erp-admin-assign-field">
+                        <label>Usuario CRM</label>
+                        <select
+                            value={assignment.userId}
+                            onChange={(event) => handleAssignmentUserChange(event.target.value)}
+                            required
+                        >
+                            <option value="">Selecciona usuario</option>
+                            {filteredAssignmentUsers.map((user) => (
+                                <option key={user.id} value={user.id}>
+                                    {user.username} - {user.first_name} {user.last_name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div className="erp-admin-assign-field">
+                        <label>Rol ERP</label>
+                        <select
+                            value={assignment.roleId}
+                            onChange={(event) => setAssignment((prev) => ({ ...prev, roleId: event.target.value }))}
+                            required
+                        >
+                            <option value="">Selecciona rol ERP</option>
+                            {roles.map((role) => (
+                                <option key={role.id} value={role.id}>{role.name}</option>
+                            ))}
+                        </select>
+                    </div>
 
                     <button type="submit">Asignar Rol ERP</button>
                 </form>
+
+                <div className="erp-admin-assign-meta">
+                    Mostrando {filteredAssignmentUsers.length} de {users.length} usuarios CRM
+                </div>
 
                 {selectedAssignmentUser && (
                     <div className="erp-admin-assign-preview">
