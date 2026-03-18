@@ -32,7 +32,8 @@ const SUMMARY_LABELS = {
     process: 'PROCESO',
     'work-instruction': 'INSTRUCCIONES DE TRABAJO',
     'risk-matrix': 'MATRIZ DE RIESGO',
-    'management-indicator': 'KPI'
+    'management-indicator': 'KPI',
+    'complementary-doc': 'DOCS. COMPLEMENTARIOS'
 };
 
 const ProcessMap = () => {

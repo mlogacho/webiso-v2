@@ -18,8 +18,8 @@ UPLOADS_DIR.mkdir(exist_ok=True)
 
 DB_PATH = Path(__file__).parent / 'uploads.db'
 MAX_FILE_MB = 50
-ALLOWED_EXTENSIONS = {'.pdf', '.xlsx', '.xls'}
-VALID_DOC_TYPES = {'process', 'risk-matrix', 'work-instruction', 'management-indicator'}
+ALLOWED_EXTENSIONS = {'.pdf', '.xlsx', '.xls', '.doc', '.docx'}
+VALID_DOC_TYPES = {'process', 'risk-matrix', 'work-instruction', 'management-indicator', 'complementary-doc'}
 VALID_STANDARDS = {'iso9001', 'iso27001'}
 
 app.config['MAX_CONTENT_LENGTH'] = MAX_FILE_MB * 1024 * 1024

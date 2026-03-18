@@ -175,11 +175,8 @@ const ERPDataCom = () => {
             return;
         }
 
-        let targetUrl = appUrl;
-        if (appId === 'erp_crm') {
-            const separator = appUrl.includes('?') ? '&' : '?';
-            targetUrl = `${appUrl}${separator}sso_token=${encodeURIComponent(authToken)}`;
-        }
+        const separator = appUrl.includes('?') ? '&' : '?';
+        const targetUrl = `${appUrl}${separator}sso_token=${encodeURIComponent(authToken)}`;
 
         window.open(targetUrl, '_blank', 'noopener,noreferrer');
     };
