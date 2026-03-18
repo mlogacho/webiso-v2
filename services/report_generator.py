@@ -1,3 +1,18 @@
+"""
+services/report_generator.py
+============================
+Generación de reportes PDF para el módulo de cuestionario de diagnóstico (legacy).
+
+Produ ce un archivo PDF temporal que incluye:
+  - Datos del participante (nombre, email)
+  - Tabla de puntajes por dimensión profesional
+  - Gráfica radar con el perfil de competencias
+  - Gráfica de barras comparativa
+
+Usa fpdf2 para la estructura del PDF y matplotlib (vía services.charts) para
+las figuras. Los archivos de imagen se crean en directorios temporales y se
+elminan después de insertarse en el PDF.
+"""
 from fpdf import FPDF
 from services import charts
 import os

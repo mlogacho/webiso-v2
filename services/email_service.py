@@ -1,3 +1,17 @@
+"""
+services/email_service.py
+=========================
+Servicio de envío de correo electrónico para WebISO v2.
+
+Envía mensajes SMTP con adjuntos opcionales (reportes PDF).
+La configuración del servidor SMTP se lee exclusivamente desde variables
+de entorno para evitar credenciales en el código fuente:
+
+  SMTP_SERVER   Servidor SMTP (por defecto: smtp.gmail.com)
+  SMTP_PORT     Puerto SMTP   (por defecto: 587, STARTTLS)
+  SMTP_USER     Dirección de correo remitente
+  SMTP_PASSWORD Contraseña o App Password del remitente
+"""
 import smtplib
 from email.message import EmailMessage
 import os

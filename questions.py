@@ -1,3 +1,18 @@
+"""
+questions.py
+============
+Base de datos del cuestionario de diagnóstico de gestión de carrera (legacy).
+
+Contiene 30 preguntas distribuidas en 5 dimensiones profesionales:
+  - Persona      : autoconocimiento de competencias y valores
+  - Reputación   : percepción externa y visibilidad profesional
+  - Lugar        : conocimiento del entorno y posicionamiento en la industria
+  - Posibilidades: exploración de oportunidades y aprendizaje continuo
+  - Plan         : planificación, metas y desarrollo estructurado
+
+Cada dimensión contribuye con 6 preguntas (puntaje máximo: 30 por dimensión).
+La pregunta 17 tiene puntuación inversa (se aplica la fórmula 6 - valor).
+"""
 # Question Dictionary and Dimension Mapping
 
 # Mapping of dimensions to Question IDs (Questions are 1-indexed to match typical lists)

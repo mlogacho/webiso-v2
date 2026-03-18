@@ -1,3 +1,14 @@
+"""
+services/charts.py
+==================
+Generación de gráficas para el módulo de cuestionario de diagnóstico (legacy).
+
+Provee dos tipos de visualización de los resultados por dimensión profesional:
+  - Gráfica radar (spider chart) para mostrar el perfil multidimensional.
+  - Gráfica de barras horizontales para comparar puntajes por dimensión.
+
+Usa matplotlib con backend 'Agg' (sin GUI) para compatibilidad con entornos de servidor.
+"""
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt

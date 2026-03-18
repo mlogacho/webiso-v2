@@ -1,3 +1,26 @@
+"""
+app.py — Backend principal de WebISO v2
+=======================================
+Servidor Flask que expone dos grupos de funcionalidad:
+
+1. **API REST de Gestión Documental** (`/api/documents/*`)
+   Permite a la SPA React cargar, listar, actualizar y eliminar documentos
+   asociados a los procesos del mapa organizacional de DataCom S.A.
+   Los archivos se almacenan en disco (`uploads/`) y los metadatos en SQLite
+   (`uploads.db`). Cada documento se asocia a un proceso, un tipo documental
+   y una o más normas ISO (iso9001, iso27001).
+
+2. **Cuestionario de Diagnóstico ISO (legacy)** (`/`, `/survey`, `/results`, …)
+   Módulo Flask heredado que evalúa dimensiones de gestión profesional mediante
+   un cuestionario de 30 preguntas, genera gráficas y exporta reportes en PDF
+   con opción de envío por correo.
+
+Configuración de despliegue esperada:
+  - Gunicorn arranca este módulo como `app:app`
+  - Nginx hace proxy de `/api/` hacia Gunicorn (puerto 5001 por defecto)
+  - El frontend React (dist/) es servido directamente por Nginx
+"""
+
 from flask import Flask, render_template, request, redirect, url_for, session, send_file, flash, jsonify
 import questions
 from services import charts, report_generator, email_service
@@ -10,7 +33,7 @@ from pathlib import Path
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
-app.secret_key = 'supersecretkey' # Change this for production
+app.secret_key = 'supersecretkey'  # IMPORTANTE: cambiar por variable de entorno en producción
 
 # ── Document management storage ──────────────────────────────────────────────
 UPLOADS_DIR = Path(__file__).parent / 'uploads'
@@ -26,12 +49,14 @@ app.config['MAX_CONTENT_LENGTH'] = MAX_FILE_MB * 1024 * 1024
 
 
 def _get_db():
+    """Abre y retorna una conexión SQLite configurada con Row factory."""
     conn = sqlite3.connect(str(DB_PATH))
     conn.row_factory = sqlite3.Row
     return conn
 
 
 def _init_db():
+    """Crea la tabla `documents` si no existe. Se ejecuta al importar el módulo."""
     with _get_db() as conn:
         conn.execute('''
             CREATE TABLE IF NOT EXISTS documents (
@@ -68,6 +93,15 @@ def _row_to_dict(row):
 
 @app.route('/api/documents', methods=['GET'])
 def api_list_documents():
+    """
+    Lista todos los documentos almacenados.
+
+    Query params opcionales:
+      - process (str): filtra por nombre de proceso exacto.
+      - standard (str): filtra por norma ISO ('iso9001' | 'iso27001').
+
+    Responde: JSON array de objetos documento (camelCase).
+    """
     process_filter = request.args.get('process', '').strip()
     standard_filter = request.args.get('standard', '').strip()
 
@@ -88,6 +122,19 @@ def api_list_documents():
 
 @app.route('/api/documents', methods=['POST'])
 def api_upload_document():
+    """
+    Sube un nuevo documento y guarda sus metadatos en la base de datos.
+
+    Form data requerida:
+      - file        : archivo binario.
+      - process_name: nombre del proceso al que pertenece.
+      - doc_type    : tipo de documento (process | risk-matrix | work-instruction |
+                      management-indicator | complementary-doc).
+      - standards   : JSON array de normas, ej. ["iso9001"].
+      - replace     : 'true' para reemplazar documentos existentes del mismo tipo/proceso.
+
+    Responde: 201 con el objeto creado, o 4xx con { error: '...' }.
+    """
     if 'file' not in request.files:
         return jsonify({'error': 'No file attached'}), 400
 
@@ -158,6 +205,12 @@ def api_upload_document():
 
 @app.route('/api/documents/<doc_id>', methods=['PATCH'])
 def api_update_document(doc_id):
+    """
+    Actualiza las normas ISO asociadas a un documento existente.
+
+    Body JSON: { "standards": ["iso9001", "iso27001"] }
+    Responde: JSON con id y standards actualizados, o 404 si no existe.
+    """
     data      = request.get_json(silent=True) or {}
     standards = data.get('standards', [])
 
@@ -177,6 +230,11 @@ def api_update_document(doc_id):
 
 @app.route('/api/documents/<doc_id>', methods=['DELETE'])
 def api_delete_document(doc_id):
+    """
+    Elimina un documento de la base de datos y su archivo en disco.
+
+    Responde: 204 sin cuerpo, o 404 si no existe.
+    """
     with _get_db() as conn:
         row = conn.execute('SELECT storage_path FROM documents WHERE id = ?', (doc_id,)).fetchone()
         if not row:
@@ -194,6 +252,11 @@ def api_delete_document(doc_id):
 
 @app.route('/api/documents/<doc_id>/file', methods=['GET'])
 def api_serve_document(doc_id):
+    """
+    Sirve el archivo binario de un documento para visualización o descarga.
+
+    Responde: el archivo con su content-type original, o 404 si no existe.
+    """
     with _get_db() as conn:
         row = conn.execute('SELECT * FROM documents WHERE id = ?', (doc_id,)).fetchone()
     if not row:
@@ -213,16 +276,26 @@ def api_serve_document(doc_id):
 
 @app.route('/')
 def index():
+    """Renderiza la página de inicio del cuestionario de diagnóstico (legacy)."""
     return render_template('index.html')
 
 @app.route('/start', methods=['POST'])
 def start_survey():
+    """
+    Inicia la sesión del cuestionario guardando nombre y email del participante.
+    Redirige a /survey.
+    """
     session['user_name'] = request.form.get('name')
     session['user_email'] = request.form.get('email')
     return redirect(url_for('survey'))
 
 @app.route('/survey')
 def survey():
+    """
+    Muestra el cuestionario de 30 preguntas.
+    Requiere sesión activa (user_name); sin ella redirige a index.
+    Renderiza: templates/survey.html
+    """
     if 'user_name' not in session:
         return redirect(url_for('index'))
     
@@ -232,6 +305,12 @@ def survey():
 
 @app.route('/submit', methods=['POST'])
 def submit_survey():
+    """
+    Procesa las respuestas del cuestionario.
+    Calcula puntuaciones por dimensión (con preguntas de puntuación inversa),
+    guarda los resultados en sesión y redirige a /results.
+    Requiere sesión activa.
+    """
     if 'user_name' not in session:
         return redirect(url_for('index'))
         
@@ -256,6 +335,11 @@ def submit_survey():
 
 @app.route('/results')
 def results():
+    """
+    Muestra los resultados del cuestionario con gráfica radar y gráfica de barras.
+    Requiere sesión con scores calculados.
+    Renderiza: templates/results.html
+    """
     if 'scores' not in session or 'user_name' not in session:
         return redirect(url_for('index'))
         
@@ -276,6 +360,10 @@ def results():
 
 @app.route('/download_pdf')
 def download_pdf():
+    """
+    Genera y descarga el reporte PDF con los resultados del cuestionario.
+    Requiere sesión activa con scores.
+    """
     if 'scores' not in session or 'user_name' not in session:
         return redirect(url_for('index'))
         
@@ -288,6 +376,12 @@ def download_pdf():
 
 @app.route('/send_email')
 def send_email_route():
+    """
+    Genera el PDF y lo envía por correo al email del participante.
+    Usa el servicio SMTP configurado en variables de entorno (SMTP_USER, SMTP_PASSWORD).
+    Requiere sesión activa con scores.
+    Responde: HTML simple con confirmación o mensaje de error.
+    """
     if 'scores' not in session or 'user_name' not in session:
         return redirect(url_for('index'))
         

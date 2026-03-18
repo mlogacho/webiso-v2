@@ -26,3 +26,43 @@ dist-ssr
 # Flask backend — uploaded documents and database (server-local data)
 uploads/
 uploads.db
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+venv/
+.venv/
+env/
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Database
+db.sqlite3
+*.sqlite3
+
+# Media / uploads (server-local)
+media/
+staticfiles/
+
+# Logs
+*.log
+logs/
+
+# macOS
+.DS_Store
+
+# Tests
+.pytest_cache/
+htmlcov/
+.coverage
+coverage.xml
