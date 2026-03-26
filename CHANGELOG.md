@@ -14,6 +14,28 @@ Versionado semántico según [SemVer](https://semver.org/lang/es/).
 
 ---
 
+## [0.2.0] — 2026-03-26
+
+### Added
+- **Soporte multi-documento en todas las categorías del mapa de procesos**
+  - PROCESO, MATRIZ DE RIESGO, KPI y DOCS. COMPLEMENTARIOS ahora aceptan **múltiples archivos** por proceso (antes solo aceptaban uno).
+  - INSTRUCCIONES DE TRABAJO ya era múltiple; se mantiene sin cambios funcionales.
+- Botón **Eliminar** (🗑️ rojo) en el **resumen de documentación cargada** para cada archivo individual.
+- Botones **Ver** y **Descargar** separados en la sección de detalle de documentos cargados (cards de cada tipo).
+- Estilo `.process-summary-delete` con color rojo para el botón eliminar en el resumen.
+- Truncado visual (`text-overflow: ellipsis`) del nombre de archivo largo en el resumen (`process-summary-filename`).
+
+### Changed
+- Eliminado el comportamiento de reemplazo automático (`replace=true`) al subir documentos. El usuario gestiona cada archivo individualmente y debe eliminar los que ya no necesite.
+- Badge "Único por proceso" en las cards de carga reemplazado por "Multiple" en todos los tipos.
+- Label de `management-indicator` actualizado a "Indicadores de Gestion (KPI)" para mayor claridad.
+
+### Files changed
+- `src/utils/processDocuments.js`
+- `src/components/ProcessMap/ProcessMap.jsx`
+- `src/components/ProcessMap/ProcessMap.css`
+
+
 ## [0.1.0-alpha] — 2026-03-18
 
 ### Added
