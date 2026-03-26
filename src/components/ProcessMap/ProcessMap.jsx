@@ -199,7 +199,7 @@ const ProcessMap = () => {
                                         <ul className="process-summary-list">
                                             {summaryItem.items.map((document) => (
                                                 <li key={document.id}>
-                                                    <span>{document.fileName}</span>
+                                                    <span className="process-summary-filename">{document.fileName}</span>
                                                     <div className="process-summary-actions">
                                                         <button type="button" onClick={() => openDocument(document)}>
                                                             <Eye size={14} />
@@ -208,6 +208,15 @@ const ProcessMap = () => {
                                                         <button type="button" onClick={() => downloadDocument(document)}>
                                                             <Download size={14} />
                                                             Descargar
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            className="process-summary-delete"
+                                                            onClick={() => handleDeleteDocument(document.id)}
+                                                            title="Eliminar documento"
+                                                        >
+                                                            <Trash2 size={14} />
+                                                            Eliminar
                                                         </button>
                                                     </div>
                                                 </li>
@@ -230,7 +239,7 @@ const ProcessMap = () => {
                                 <section key={documentType.id} className="document-upload-card">
                                     <div className="document-upload-card__header">
                                         <h5>{documentType.label}</h5>
-                                        <span>{documentType.multiple ? 'Multiple' : 'Unico por proceso'}</span>
+                                        <span>Multiple</span>
                                     </div>
                                     <p>{documentType.description}</p>
 
@@ -301,8 +310,12 @@ const ProcessMap = () => {
 
                                                         <div className="document-record__actions">
                                                             <button type="button" onClick={() => openDocument(document)}>
+                                                                <Eye size={14} />
+                                                                Ver
+                                                            </button>
+                                                            <button type="button" onClick={() => downloadDocument(document)}>
                                                                 <Download size={14} />
-                                                                Abrir
+                                                                Descargar
                                                             </button>
                                                             <button type="button" className="document-record__delete" onClick={() => handleDeleteDocument(document.id)}>
                                                                 <Trash2 size={14} />

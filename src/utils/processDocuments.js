@@ -3,15 +3,15 @@ export const DOCUMENT_TYPES = [
         id: 'process',
         label: 'Proceso',
         accept: 'application/pdf,.pdf',
-        multiple: false,
-        description: 'Procedimiento principal del proceso en PDF.'
+        multiple: true,
+        description: 'Se pueden cargar uno o varios documentos de proceso en PDF.'
     },
     {
         id: 'risk-matrix',
         label: 'Matriz de Riesgos',
         accept: '.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel',
-        multiple: false,
-        description: 'Matriz de riesgos en Excel.'
+        multiple: true,
+        description: 'Se pueden cargar una o varias matrices de riesgos en Excel.'
     },
     {
         id: 'work-instruction',
@@ -22,10 +22,10 @@ export const DOCUMENT_TYPES = [
     },
     {
         id: 'management-indicator',
-        label: 'Indicadores de Gestion',
+        label: 'Indicadores de Gestion (KPI)',
         accept: '.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel',
-        multiple: false,
-        description: 'Indicadores o KPIs en Excel.'
+        multiple: true,
+        description: 'Se pueden cargar uno o varios KPI / indicadores en Excel.'
     },
     {
         id: 'complementary-doc',
@@ -84,17 +84,14 @@ export const saveDocuments = async ({ processName, docType, files, standards }) 
     const uploadedFiles = Array.from(files || []);
     if (!uploadedFiles.length) throw new Error('Debes seleccionar al menos un archivo.');
 
-    for (let index = 0; index < uploadedFiles.length; index++) {
-        const file     = uploadedFiles[index];
+    for (const file of uploadedFiles) {
         const formData = new FormData();
         formData.append('file',         file);
         formData.append('process_name', processName);
         formData.append('doc_type',     docType);
         formData.append('standards',    JSON.stringify(standards));
-        // For single-slot types, replace on the first upload only
-        if (!config.multiple && index === 0) {
-            formData.append('replace', 'true');
-        }
+        // Never replace — all types now support multiple docs; user deletes manually.
+        formData.append('replace', 'false');
 
         const response = await fetch(API_BASE, { method: 'POST', body: formData });
         await checkResponse(response);
