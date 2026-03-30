@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Target, Users, BotMessageSquare, ExternalLink, ClipboardList, ShieldCheck, LogOut } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Target, Users, BotMessageSquare, ExternalLink, ClipboardList, ShieldCheck, LogOut, Eye, EyeOff } from 'lucide-react';
 import { useERPAuth } from '../context/ERPAuthContext';
 import './ERPDataCom.css';
 
@@ -20,6 +21,22 @@ const ERPDataCom = () => {
     const [setupData, setSetupData] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
+
+    const parseApiResponse = async (response) => {
+        const contentType = response.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+            try {
+                return await response.json();
+            } catch {
+                return null;
+            }
+        }
+        return null;
+    };
+
+    const unavailableServiceError =
+        'El servicio de autenticacion ERP no esta disponible en este entorno. Configura VITE_ERP_AUTH_API_BASE o verifica el proxy.';
 
     const apps = [
         {
@@ -50,7 +67,7 @@ const ERPDataCom = () => {
             id: 'erp_acta',
             name: 'ACTA DE REUNIONES',
             description: 'Registro y seguimiento de actas, compromisos y acuerdos de reuniones.',
-            url: 'http://10.11.121.58:8030/login',
+            url: 'http://10.11.121.58:8030',
             icon: <ClipboardList size={48} />,
             colorClass: 'card-green'
         }
@@ -76,9 +93,13 @@ const ERPDataCom = () => {
                 body: JSON.stringify(credentials)
             });
 
-            const data = await response.json();
+            const data = await parseApiResponse(response);
             if (!response.ok) {
-                throw new Error(data.error || 'Credenciales incorrectas.');
+                throw new Error(data?.error || unavailableServiceError);
+            }
+
+            if (!data) {
+                throw new Error(unavailableServiceError);
             }
 
             if (data.requires_2fa_setup) {
@@ -119,9 +140,13 @@ const ERPDataCom = () => {
                 })
             });
 
-            const data = await response.json();
+            const data = await parseApiResponse(response);
             if (!response.ok) {
-                throw new Error(data.error || 'No fue posible validar el codigo.');
+                throw new Error(data?.error || unavailableServiceError);
+            }
+
+            if (!data) {
+                throw new Error(unavailableServiceError);
             }
 
             await completeLogin(data.token);
@@ -148,9 +173,13 @@ const ERPDataCom = () => {
                 })
             });
 
-            const data = await response.json();
+            const data = await parseApiResponse(response);
             if (!response.ok) {
-                throw new Error(data.error || 'Codigo de autenticacion invalido.');
+                throw new Error(data?.error || unavailableServiceError);
+            }
+
+            if (!data) {
+                throw new Error(unavailableServiceError);
             }
 
             await completeLogin(data.token);
@@ -255,13 +284,29 @@ const ERPDataCom = () => {
                                 />
 
                                 <label htmlFor="erp-password">Contrasena</label>
-                                <input
-                                    id="erp-password"
-                                    type="password"
-                                    value={credentials.password}
-                                    onChange={(event) => setCredentials((prev) => ({ ...prev, password: event.target.value }))}
-                                    required
-                                />
+                                <div className="erp-password-input-wrap">
+                                    <input
+                                        id="erp-password"
+                                        type={showPassword ? 'text' : 'password'}
+                                        value={credentials.password}
+                                        onChange={(event) => setCredentials((prev) => ({ ...prev, password: event.target.value }))}
+                                        required
+                                    />
+                                    <button
+                                        type="button"
+                                        className="erp-password-visibility-btn"
+                                        onClick={() => setShowPassword((value) => !value)}
+                                        aria-label={showPassword ? 'Ocultar contrasena' : 'Mostrar contrasena'}
+                                        title={showPassword ? 'Ocultar contrasena' : 'Mostrar contrasena'}
+                                    >
+                                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                    </button>
+                                </div>
+
+                                <div className="erp-password-links">
+                                    <Link to="/auth/password-recovery">Recuperar contrasena</Link>
+                                    <Link to="/auth/change-password">Cambiar contrasena</Link>
+                                </div>
 
                                 <button type="submit" disabled={isLoading}>
                                     {isLoading ? 'Verificando...' : 'Siguiente'}
