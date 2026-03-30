@@ -154,6 +154,7 @@ El workflow `.github/workflows/build-and-artifacts.yml` se ejecuta en push a `ma
 
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — Arquitectura del sistema
 - [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) — Guía de despliegue
+- [`docs/COMPLEMENTARY_DOCUMENTS_UI_RECOVERY.md`](docs/COMPLEMENTARY_DOCUMENTS_UI_RECOVERY.md) — Recuperacion de interfaz y prevencion de regresion en documentos complementarios
 - [`docs/disaster-recovery.md`](docs/disaster-recovery.md) — Recuperación ante fallos
 - [`docs/server-inventory.md`](docs/server-inventory.md) — Inventario del servidor
 - [`docs/validation-checklist.md`](docs/validation-checklist.md) — Checklist de validación

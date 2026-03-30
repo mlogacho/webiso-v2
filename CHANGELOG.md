@@ -10,7 +10,19 @@ Versionado semántico según [SemVer](https://semver.org/lang/es/).
 ## [Unreleased]
 
 ### Added
-- [PENDIENTE — completar cuando se implemente]
+- CTA visible en biblioteca ISO: `Crear documento complementario` con navegacion a `/process-map`.
+- Documentacion tecnica del incidente y su mitigacion en `docs/COMPLEMENTARY_DOCUMENTS_UI_RECOVERY.md`.
+
+### Changed
+- Se refuerza el flujo de creacion de documentos complementarios para que no dependa de conocimiento implicito del usuario (creacion en Mapa de Procesos, consulta en biblioteca ISO).
+
+### Fixed
+- Regresion de UX donde usuarios percibian perdida de interfaz para crear documentos complementarios al no tener acceso directo desde pantallas ISO.
+
+### Files changed
+- `src/components/DocumentLibrary.jsx`
+- `src/components/DocumentLibrary.css`
+- `docs/COMPLEMENTARY_DOCUMENTS_UI_RECOVERY.md`
 
 ---
 

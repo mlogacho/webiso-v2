@@ -1,5 +1,6 @@
 import React from 'react';
 import { Download, FileSpreadsheet, FileText, Search, ShieldCheck } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import {
     DOCUMENT_TYPES,
     ISO_STANDARDS,
@@ -67,6 +68,9 @@ const DocumentLibrary = ({ standardId, title, description }) => {
                     <h2>{title}</h2>
                     <p>{description}</p>
                 </div>
+                <Link to="/process-map" className="document-library__create-btn">
+                    Crear documento complementario
+                </Link>
             </div>
 
             <div className="document-library__filters">
