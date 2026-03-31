@@ -124,8 +124,8 @@ def api_list_documents():
 
 def _get_crm_users_to_notify():
     """
-    Obtiene usuarios del CRM que tienen rol y correo electrónico, consultando la base
-    de datos de CRM directamente en el servidor.
+    Obtiene todos los usuarios del CRM que tienen un correo electrónico registrado,
+    consultando la base de datos de CRM directamente en el servidor.
     """
     crm_db_path = '/var/www/crm-datacom/db.sqlite3'
     if not os.path.exists(crm_db_path):
@@ -136,11 +136,9 @@ def _get_crm_users_to_notify():
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         query = '''
-            SELECT u.email, u.first_name, u.last_name, r.name as role_name
-            FROM auth_user u 
-            JOIN core_userprofile p ON u.id = p.user_id 
-            JOIN core_role r ON p.role_id = r.id
-            WHERE u.email IS NOT NULL AND u.email != '' AND u.is_active = 1
+            SELECT email, first_name, last_name, username
+            FROM auth_user
+            WHERE email IS NOT NULL AND email != '' AND is_active = 1
         '''
         rows = cursor.execute(query).fetchall()
         return [dict(row) for row in rows]
@@ -151,39 +149,33 @@ def _get_crm_users_to_notify():
 
 def _send_document_notification(doc_info):
     """
-    Notifica a los usuarios con rol sobre la subida de un nuevo documento.
+    Notifica a todos los usuarios con un correo registrado sobre la publicación
+    de un nuevo documento en el Mapa de Procesos.
     """
     users = _get_crm_users_to_notify()
     if not users:
         print("No hay usuarios de CRM configurados para notificar.")
         return
 
-    # Se establece una vigencia general de 1 año (estimación estándar si no hay fecha explícita)
+    # Usamos la fecha y hora exacta de subida almacenada en 'uploaded_at'
     upload_date = datetime.fromisoformat(doc_info['uploaded_at'].replace('Z', '+00:00')) if isinstance(doc_info['uploaded_at'], str) else doc_info['uploaded_at']
-    validity_date = upload_date + timedelta(days=365)
-    
-    upload_str = upload_date.strftime("%d/%m/%Y")
-    validity_str = validity_date.strftime("%d/%m/%Y")
+    upload_datetime_str = upload_date.strftime("%d/%m/%Y a las %H:%M:%S (UTC)")
 
     subject = f"Nuevo Documento en WebISO: {doc_info['file_name']}"
 
     for user in users:
         email = user['email']
-        name = f"{user['first_name']} {user['last_name']}".strip() or "Usuario"
-        role = user['role_name']
+        name = f"{user['first_name']} {user['last_name']}".strip() or user['username']
 
-        body = f"""Hola {name} ({role}),
+        body = f"""Hola {name},
 
-Le notificamos que se ha subido un nuevo documento al Sistema de Gestión Integrado (WebISO).
+Le notificamos que se ha publicado un nuevo documento en el Mapa de Procesos (Sistema de Gestión Integrado).
 
-Detalles del Documento:
-- Nombre: {doc_info['file_name']}
-- Proceso: {doc_info['process_name']}
-- Tipo de Documento: {doc_info['doc_type']}
-- Fecha de subida: {upload_str}
-- Vigencia estimada: {validity_str} (1 año)
+1. Documento Subido: {doc_info['file_name']}
+2. Lugar de Subida: Proceso "{doc_info['process_name']}" (Categoría: {doc_info['doc_type']})
+3. Fecha de Publicación: {upload_datetime_str}
 
-Puede acceder al sistema en el Mapa de Procesos para verificar y descargar el documento.
+Puede acceder al sistema para verificar y descargar el documento en la sección respectiva.
 
 Saludos cordiales,
 Equipo WebISO
