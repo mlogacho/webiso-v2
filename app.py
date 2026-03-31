@@ -23,14 +23,16 @@ Configuración de despliegue esperada:
 
 from flask import Flask, render_template, request, redirect, url_for, session, send_file, flash, jsonify
 import questions
-from services import charts, report_generator, email_service
+from services import charts, report_generator, email_service, auth_service
 import os
 import json
 import sqlite3
 import uuid
-from datetime import datetime, timezone
+import secrets
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from werkzeug.utils import secure_filename
+from functools import wraps
 
 app = Flask(__name__)
 app.secret_key = 'supersecretkey'  # IMPORTANTE: cambiar por variable de entorno en producción
@@ -120,6 +122,78 @@ def api_list_documents():
     return jsonify(results)
 
 
+def _get_crm_users_to_notify():
+    """
+    Obtiene usuarios del CRM que tienen rol y correo electrónico, consultando la base
+    de datos de CRM directamente en el servidor.
+    """
+    crm_db_path = '/var/www/crm-datacom/db.sqlite3'
+    if not os.path.exists(crm_db_path):
+        return []
+
+    try:
+        conn = sqlite3.connect(crm_db_path)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        query = '''
+            SELECT u.email, u.first_name, u.last_name, r.name as role_name
+            FROM auth_user u 
+            JOIN core_userprofile p ON u.id = p.user_id 
+            JOIN core_role r ON p.role_id = r.id
+            WHERE u.email IS NOT NULL AND u.email != '' AND u.is_active = 1
+        '''
+        rows = cursor.execute(query).fetchall()
+        return [dict(row) for row in rows]
+    except Exception as e:
+        print("Error al obtener usuarios de CRM para notificar:", e)
+        return []
+
+
+def _send_document_notification(doc_info):
+    """
+    Notifica a los usuarios con rol sobre la subida de un nuevo documento.
+    """
+    users = _get_crm_users_to_notify()
+    if not users:
+        print("No hay usuarios de CRM configurados para notificar.")
+        return
+
+    # Se establece una vigencia general de 1 año (estimación estándar si no hay fecha explícita)
+    upload_date = datetime.fromisoformat(doc_info['uploaded_at'].replace('Z', '+00:00')) if isinstance(doc_info['uploaded_at'], str) else doc_info['uploaded_at']
+    validity_date = upload_date + timedelta(days=365)
+    
+    upload_str = upload_date.strftime("%d/%m/%Y")
+    validity_str = validity_date.strftime("%d/%m/%Y")
+
+    subject = f"Nuevo Documento en WebISO: {doc_info['file_name']}"
+
+    for user in users:
+        email = user['email']
+        name = f"{user['first_name']} {user['last_name']}".strip() or "Usuario"
+        role = user['role_name']
+
+        body = f"""Hola {name} ({role}),
+
+Le notificamos que se ha subido un nuevo documento al Sistema de Gestión Integrado (WebISO).
+
+Detalles del Documento:
+- Nombre: {doc_info['file_name']}
+- Proceso: {doc_info['process_name']}
+- Tipo de Documento: {doc_info['doc_type']}
+- Fecha de subida: {upload_str}
+- Vigencia estimada: {validity_str} (1 año)
+
+Puede acceder al sistema en el Mapa de Procesos para verificar y descargar el documento.
+
+Saludos cordiales,
+Equipo WebISO
+"""
+        print(f"Notificando subida de doc a {email}...")
+        try:
+            email_service.send_email(email, subject, body)
+        except Exception as e:
+            print(f"No se pudo enviar correo a {email}: {e}")
+
 @app.route('/api/documents', methods=['POST'])
 def api_upload_document():
     """
@@ -200,7 +274,17 @@ def api_upload_document():
 
     with _get_db() as conn:
         row = conn.execute('SELECT * FROM documents WHERE id = ?', (doc_id,)).fetchone()
-    return jsonify(_row_to_dict(row)), 201
+    
+    doc_dict = _row_to_dict(row)
+    
+    # Enviar notificaciones por correo en background (o síncrono para simplificar, 
+    # asumiendo pocos usuarios)
+    try:
+        _send_document_notification(doc_dict)
+    except Exception as e:
+        print(f"Error general en envío de notificaciones: {e}")
+
+    return jsonify(doc_dict), 201
 
 
 @app.route('/api/documents/<doc_id>', methods=['PATCH'])
@@ -274,7 +358,319 @@ def api_serve_document(doc_id):
     )
 
 
-@app.route('/')
+# ── Authentication API endpoints (Local auth module) ──────────────────────────
+
+def token_required(f):
+    """Decorador para verificar que se incluya un token de autenticación local."""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = None
+        if 'Authorization' in request.headers:
+            auth_header = request.headers['Authorization']
+            try:
+                token = auth_header.split(' ')[1]
+            except IndexError:
+                return jsonify({'error': 'Token inválido'}), 401
+        
+        if not token:
+            return jsonify({'error': 'Token requerido'}), 401
+        
+        # Get user_id from token (simplified) — en producción usar JWT
+        # Por ahora aceptamos cualquier token válido (debe validarse en frontend)
+        return f(token, *args, **kwargs)
+    
+    return decorated
+
+
+@app.route('/api/auth/register', methods=['POST'])
+def auth_register():
+    """
+    Registra un nuevo usuario con autenticación local.
+    
+    Body JSON requerido:
+      - username (str): Único, >= 3 caracteres
+      - email (str): Único, email válido
+      - password (str): >= 8 caracteres
+      - first_name (str, opcional): Nombre
+      - last_name (str, opcional): Apellido
+    
+    Responde: 201 con datos de usuario si exitoso, o 400 con error
+    """
+    data = request.get_json(silent=True) or {}
+    
+    username = data.get('username', '').strip()
+    email = data.get('email', '').strip()
+    password = data.get('password', '').strip()
+    first_name = data.get('first_name', '').strip()
+    last_name = data.get('last_name', '').strip()
+    
+    if not all([username, email, password]):
+        return jsonify({'error': 'Faltan campos requeridos'}), 400
+    
+    result = auth_service.create_user(
+        username=username,
+        email=email,
+        password=password,
+        first_name=first_name,
+        last_name=last_name
+    )
+    
+    if 'error' in result:
+        return jsonify(result), 400
+    
+    # En local sin SMTP, activar el usuario automáticamente para no bloquear pruebas.
+    if not auth_service.is_smtp_configured():
+        with auth_service.get_auth_db() as conn:
+            conn.execute('UPDATE users SET email_verified = 1 WHERE id = ?', (result['id'],))
+            conn.commit()
+        return jsonify({
+            **result,
+            'message': 'Usuario registrado y verificado automaticamente (modo desarrollo).'
+        }), 201
+
+    # Con SMTP configurado, se usa verificación por email.
+    import secrets
+    token = secrets.token_urlsafe(32)
+    expires_at = (datetime.utcnow() + timedelta(hours=24)).isoformat()
+
+    with auth_service.get_auth_db() as conn:
+        conn.execute('''
+            INSERT INTO email_verification_tokens (user_id, token, created_at, expires_at)
+            VALUES (?, ?, ?, ?)
+        ''', (result['id'], token, datetime.utcnow().isoformat(), expires_at))
+        conn.commit()
+
+    app_domain = request.args.get('app_domain', request.host_url.rstrip('/'))
+    auth_service.send_verification_email(email, username, token, app_domain)
+
+    return jsonify({
+        **result,
+        'message': 'Usuario registrado. Verifica tu email para continuar.'
+    }), 201
+
+
+@app.route('/api/auth/login', methods=['POST'])
+def auth_login():
+    """
+    Autentica un usuario con credenciales locales.
+    
+    Body JSON:
+      - username (str): Nombre de usuario
+      - password (str): Contraseña
+    
+    Responde: 200 con token y datos del usuario, o 401/400 con error
+    """
+    data = request.get_json(silent=True) or {}
+    
+    username = data.get('username', '').strip()
+    password = data.get('password', '').strip()
+    
+    if not all([username, password]):
+        return jsonify({'error': 'Usuario y contraseña requeridos'}), 400
+    
+    result = auth_service.authenticate_user(username, password)
+    
+    if 'error' in result:
+        return jsonify(result), 401
+    
+    return jsonify(result), 200
+
+
+@app.route('/api/auth/verify-email', methods=['POST'])
+def auth_verify_email():
+    """
+    Verifica el email del usuario usando un token de verificación.
+    
+    Body JSON:
+      - token (str): Token de verificación enviado por email
+    
+    Responde: 200 si exitoso, o 400 con error
+    """
+    data = request.get_json(silent=True) or {}
+    token = data.get('token', '').strip()
+    
+    if not token:
+        return jsonify({'error': 'Token requerido'}), 400
+    
+    with auth_service.get_auth_db() as conn:
+        verify = conn.execute('''
+            SELECT user_id, expires_at FROM email_verification_tokens 
+            WHERE token = ? AND verified_at IS NULL
+        ''', (token,)).fetchone()
+        
+        if not verify:
+            return jsonify({'error': 'Token inválido'}), 400
+        
+        expires_at = datetime.fromisoformat(verify['expires_at'])
+        if datetime.utcnow() > expires_at:
+            return jsonify({'error': 'Token expirado'}), 400
+        
+        user_id = verify['user_id']
+        
+        # Marcar email como verificado
+        conn.execute('''
+            UPDATE users SET email_verified = 1 WHERE id = ?
+        ''', (user_id,))
+        
+        # Marcar token como usado
+        conn.execute('''
+            UPDATE email_verification_tokens SET verified_at = ? WHERE token = ?
+        ''', (datetime.utcnow().isoformat(), token))
+        
+        conn.commit()
+    
+    return jsonify({'success': True, 'message': 'Email verificado exitosamente'}), 200
+
+
+@app.route('/api/auth/change-password', methods=['POST'])
+def auth_change_password():
+    """
+    Cambia la contraseña de un usuario autenticado.
+    
+    Headers requerido:
+      - Authorization: Bearer <user_id> (simplificado para este ejemplo)
+    
+    Body JSON:
+      - old_password (str): Contraseña actual
+      - new_password (str): Nueva contraseña (>= 8 caracteres)
+    
+    Responde: 200 si exitoso, o 400/401 con error
+    """
+    # Para este ejemplo simplificado, el user_id viene en el header
+    # En producción, debería validar un JWT token
+    user_id_str = request.headers.get('X-User-ID', '').strip()
+    
+    if not user_id_str or not user_id_str.isdigit():
+        return jsonify({'error': 'Usuario no autenticado'}), 401
+    
+    user_id = int(user_id_str)
+    data = request.get_json(silent=True) or {}
+    
+    old_password = data.get('old_password', '').strip()
+    new_password = data.get('new_password', '').strip()
+    
+    if not all([old_password, new_password]):
+        return jsonify({'error': 'Faltan campos requeridos'}), 400
+    
+    result = auth_service.change_password(user_id, old_password, new_password)
+    
+    if 'error' in result:
+        return jsonify(result), 400
+    
+    return jsonify(result), 200
+
+
+@app.route('/api/auth/request-reset', methods=['POST'])
+def auth_request_reset():
+    """
+    Solicita un reinicio de contraseña. Genera un token y envía email.
+    
+    Body JSON:
+      - email (str): Email del usuario
+    
+    Responde: 200 siempre (por seguridad, no revela si existe o no)
+    """
+    data = request.get_json(silent=True) or {}
+    email = data.get('email', '').strip()
+    
+    if not email:
+        return jsonify({'error': 'Email requerido'}), 400
+    
+    result = auth_service.request_password_reset(email)
+    
+    # Si el usuario existe, enviar email de recuperación
+    if result.get('user_id'):
+        from services.auth_service import send_reset_email
+        app_domain = request.args.get('app_domain', request.host_url.rstrip('/'))
+        send_reset_email(
+            email=result['email'],
+            username=result['username'],
+            token=result['token'],
+            app_domain=app_domain
+        )
+    
+    response_payload = {
+        'success': True,
+        'message': 'Si el email está registrado, recibirás instrucciones de recuperación'
+    }
+
+    # En modo debug sin SMTP devolvemos token para pruebas locales end-to-end.
+    if app.debug and not auth_service.is_smtp_configured() and result.get('token'):
+        response_payload['debug_reset_token'] = result['token']
+
+    # Por seguridad, en producción no se expone si el usuario existe.
+    return jsonify(response_payload), 200
+
+
+@app.route('/api/auth/verify-reset-token', methods=['POST'])
+def auth_verify_reset_token():
+    """
+    Verifica si un token de recuperación es válido.
+    
+    Body JSON:
+      - token (str): Token de restablecimiento
+    
+    Responde: 200 si válido, o 400 si inválido/expirado
+    """
+    data = request.get_json(silent=True) or {}
+    token = data.get('token', '').strip()
+    
+    if not token:
+        return jsonify({'error': 'Token requerido'}), 400
+    
+    result = auth_service.verify_reset_token(token)
+    
+    if 'error' in result:
+        return jsonify(result), 400
+    
+    return jsonify({'valid': True}), 200
+
+
+@app.route('/api/auth/reset-password', methods=['POST'])
+def auth_reset_password():
+    """
+    Restablece la contraseña usando un token de recuperación válido.
+    
+    Body JSON:
+      - token (str): Token de restablecimiento
+      - new_password (str): Nueva contraseña (>= 8 caracteres)
+    
+    Responde: 200 si exitoso, o 400 con error
+    """
+    data = request.get_json(silent=True) or {}
+    token = data.get('token', '').strip()
+    new_password = data.get('new_password', '').strip()
+    
+    if not all([token, new_password]):
+        return jsonify({'error': 'Faltan campos requeridos'}), 400
+    
+    result = auth_service.reset_password_with_token(token, new_password)
+    
+    if 'error' in result:
+        return jsonify(result), 400
+    
+    return jsonify(result), 200
+
+
+@app.route('/api/auth/user/<int:user_id>', methods=['GET'])
+def auth_get_user(user_id):
+    """
+    Obtiene información pública del usuario (sin contraseña).
+    
+    Headers opcional:
+      - X-User-ID: El ID del usuario autenticado (para verificar permiso)
+    
+    Responde: 200 con datos del usuario, o 404 si no existe
+    """
+    user = auth_service.get_user_by_id(user_id)
+    
+    if not user:
+        return jsonify({'error': 'Usuario no encontrado'}), 404
+    
+    return jsonify(user), 200
+
+
+@app.route('/', methods=['GET'])
 def index():
     """Renderiza la página de inicio del cuestionario de diagnóstico (legacy)."""
     return render_template('index.html')
