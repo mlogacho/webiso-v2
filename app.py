@@ -28,14 +28,21 @@ import os
 import json
 import sqlite3
 import uuid
+import sys
 import secrets
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from werkzeug.utils import secure_filename
+import psycopg2
+from dotenv import dotenv_values
 from functools import wraps
 
 app = Flask(__name__)
-app.secret_key = 'supersecretkey'  # IMPORTANTE: cambiar por variable de entorno en producción
+app.secret_key = 'supersecretkey'
+
+import logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # ── Document management storage ──────────────────────────────────────────────
 UPLOADS_DIR = Path(__file__).parent / 'uploads'
@@ -125,43 +132,68 @@ def api_list_documents():
 def _get_crm_users_to_notify():
     """
     Obtiene todos los usuarios del CRM que tienen un correo electrónico registrado,
-    consultando la base de datos de CRM directamente en el servidor.
+    consultando la base de datos de CRM de PostgreSQL directamente en el servidor.
     """
-    crm_db_path = '/var/www/crm-datacom/db.sqlite3'
-    if not os.path.exists(crm_db_path):
+    crm_env_path = '/var/www/crm-datacom/.env'
+    if not os.path.exists(crm_env_path):
+        print(f"No se encontró el archivo env del CRM en {crm_env_path}")
         return []
 
     try:
-        conn = sqlite3.connect(crm_db_path)
-        conn.row_factory = sqlite3.Row
+        env = dotenv_values(crm_env_path)
+        if not env:
+            logger.error(f"ARCHIVO ENV CRM VACIO O NO LEIBLE: {crm_env_path}")
+            return []
+            
+        logger.info(f"Conectando a DB CRM {env.get('DB_NAME')} en {env.get('DB_HOST')}...")
+        conn = psycopg2.connect(
+            dbname=env.get('DB_NAME'),
+            user=env.get('DB_USER'),
+            password=env.get('DB_PASSWORD'),
+            host=env.get('DB_HOST', '127.0.0.1'),
+            port=env.get('DB_PORT', '5432'),
+            connect_timeout=5
+        )
         cursor = conn.cursor()
         query = '''
             SELECT email, first_name, last_name, username
             FROM auth_user
-            WHERE email IS NOT NULL AND email != '' AND is_active = 1
+            WHERE email IS NOT NULL AND email != '' AND is_active = True
         '''
-        rows = cursor.execute(query).fetchall()
-        return [dict(row) for row in rows]
+        cursor.execute(query)
+        rows = cursor.fetchall()
+        
+        users = []
+        for row in rows:
+            users.append({
+                'email': row[0],
+                'first_name': row[1],
+                'last_name': row[2],
+                'username': row[3]
+            })
+            
+        logger.info(f"USUARIOS ENCONTRADOS EN CRM: {len(users)}")
+        cursor.close()
+        conn.close()
+        return users
     except Exception as e:
-        print("Error al obtener usuarios de CRM para notificar:", e)
+        logger.error(f"ERROR CRÍTICO CRM POSTGRES: {e}")
         return []
 
 
 def _send_document_notification(doc_info):
-    """
-    Notifica a todos los usuarios con un correo registrado sobre la publicación
-    de un nuevo documento en el Mapa de Procesos.
-    """
+    logger.info(f"ENTRANDO A NOTIFICACION: {doc_info}")
     users = _get_crm_users_to_notify()
     if not users:
-        print("No hay usuarios de CRM configurados para notificar.")
-        return
+        logger.warning("DEBUG: No hay usuarios de CRM configurados para notificar.")
+        return []
 
-    # Usamos la fecha y hora exacta de subida almacenada en 'uploaded_at'
-    upload_date = datetime.fromisoformat(doc_info['uploaded_at'].replace('Z', '+00:00')) if isinstance(doc_info['uploaded_at'], str) else doc_info['uploaded_at']
+    # Usamos la fecha y hora exacta de subida almacenada en 'uploadedAt'
+    upload_date = datetime.fromisoformat(doc_info['uploadedAt'].replace('Z', '+00:00')) if isinstance(doc_info['uploadedAt'], str) else doc_info['uploadedAt']
     upload_datetime_str = upload_date.strftime("%d/%m/%Y a las %H:%M:%S (UTC)")
 
-    subject = f"Nuevo Documento en WebISO: {doc_info['file_name']}"
+    subject = f"Nuevo Documento en WebISO: {doc_info['fileName']}"
+    notified_emails = []
 
     for user in users:
         email = user['email']
@@ -169,22 +201,54 @@ def _send_document_notification(doc_info):
 
         body = f"""Hola {name},
 
-Le notificamos que se ha publicado un nuevo documento en el Mapa de Procesos (Sistema de Gestión Integrado).
+Le notificamos que se ha publicado un nuevo documento en el Mapa de Procesos (Sistema Integrado de Gestión  y Seguridad de la Información).
 
-1. Documento Subido: {doc_info['file_name']}
-2. Lugar de Subida: Proceso "{doc_info['process_name']}" (Categoría: {doc_info['doc_type']})
-3. Fecha de Publicación: {upload_datetime_str}
+1. Documento Subido: {doc_info['fileName']}
+2. Lugar de Subida: Proceso "{doc_info['processName']}" (Categoría: {doc_info['docType']})
+3. Fecha y hora de Subida: {upload_datetime_str}
 
+Se solicita amablemente su revisión y estricto cumplimiento del documento mencionado.
 Puede acceder al sistema para verificar y descargar el documento en la sección respectiva.
 
 Saludos cordiales,
-Equipo WebISO
+Equipo Sistema Integrado de Gestión y Seguridad de la Información,
 """
-        print(f"Notificando subida de doc a {email}...")
-        try:
-            email_service.send_email(email, subject, body)
-        except Exception as e:
-            print(f"No se pudo enviar correo a {email}: {e}")
+        logger.info(f"Notificando subida de doc a {email}...")
+        success, error_msg = email_service.send_email(email, subject, body)
+        if success:
+            logger.info(f"Correo enviado exitosamente a {email}")
+            notified_emails.append(email)
+        else:
+            logger.error(f"FALLO ENVÍO a {email}: {error_msg}")
+            
+    return notified_emails
+
+
+@app.route('/api/diag/emails', methods=['GET'])
+def diag_emails():
+    """Endpoint de diagnóstico para probar CRM y SMTP"""
+    results = {
+        "crm_users_count": 0,
+        "crm_users_sample": [],
+        "smtp_test_success": False,
+        "smtp_test_error": None
+    }
+    
+    users = _get_crm_users_to_notify()
+    results["crm_users_count"] = len(users)
+    results["crm_users_sample"] = users[:2]
+    
+    if users:
+        test_user = users[0]
+        success, error = email_service.send_email(
+            test_user['email'], 
+            "WebISO Diagnostic Test", 
+            "Esta es una prueba de conectividad SMTP desde WebISO v2."
+        )
+        results["smtp_test_success"] = success
+        results["smtp_test_error"] = error
+        
+    return jsonify(results)
 
 @app.route('/api/documents', methods=['POST'])
 def api_upload_document():
@@ -272,9 +336,11 @@ def api_upload_document():
     # Enviar notificaciones por correo en background (o síncrono para simplificar, 
     # asumiendo pocos usuarios)
     try:
-        _send_document_notification(doc_dict)
+        notified = _send_document_notification(doc_dict)
+        doc_dict['notifiedEmails'] = notified if notified else []
     except Exception as e:
-        print(f"Error general en envío de notificaciones: {e}")
+        logger.exception(f"Error general en envío de notificaciones: {e}")
+        doc_dict['notifiedEmails'] = []
 
     return jsonify(doc_dict), 201
 

@@ -42,10 +42,15 @@ def send_email(recipient_email, subject, body, attachment_path=None):
         msg.add_attachment(file_data, maintype='application', subtype='pdf', filename=file_name)
 
     try:
-        with smtplib.SMTP(smtp_server, smtp_port) as server:
+        if smtp_port == 465:
+            server = smtplib.SMTP_SSL(smtp_server, smtp_port)
+        else:
+            server = smtplib.SMTP(smtp_server, smtp_port)
             server.starttls()
-            server.login(smtp_user, smtp_password)
-            server.send_message(msg)
+            
+        server.login(smtp_user, smtp_password)
+        server.send_message(msg)
+        server.quit()
         return True, "Email sent successfully"
     except Exception as e:
         return False, str(e)

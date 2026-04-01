@@ -16,7 +16,7 @@ Parámetros clave:
 import multiprocessing
 
 # Bind to a local TCP port; Nginx proxies /api/ to this address
-bind = "127.0.0.1:5001"
+bind = "127.0.0.1:5002"
 
 # Workers
 workers = multiprocessing.cpu_count() * 2 + 1
