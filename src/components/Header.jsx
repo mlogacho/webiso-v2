@@ -2,6 +2,7 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
 import { useERPAuth } from '../context/ERPAuthContext';
+import UserAccountMenu from './UserAccountMenu';
 import logo from '../assets/logo.png';
 import './Header.css';
 
@@ -29,6 +30,8 @@ const Header = () => {
                         <NavLink to="/erp-admin" onClick={() => setIsMenuOpen(false)} className={({ isActive }) => isActive ? 'active' : ''}>Admin ERP</NavLink>
                     )}
                 </nav>
+
+                <UserAccountMenu />
 
                 <button className="mobile-menu-btn" onClick={toggleMenu} aria-label="Toggle menu">
                     {isMenuOpen ? <X size={24} /> : <Menu size={24} />}

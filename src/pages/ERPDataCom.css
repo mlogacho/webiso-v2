@@ -227,6 +227,50 @@
     font-size: 1rem;
 }
 
+.erp-password-input-wrap {
+    position: relative;
+}
+
+.erp-password-input-wrap input {
+    padding-right: 2.7rem;
+}
+
+.erp-password-visibility-btn {
+    position: absolute;
+    right: 0.4rem;
+    top: 50%;
+    transform: translateY(-50%);
+    border: none;
+    background: transparent;
+    color: #4a5a70;
+    padding: 0.35rem;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-top: 0;
+}
+
+.erp-password-visibility-btn:hover {
+    background: #f1f5fb;
+}
+
+.erp-password-links {
+    margin-top: 0.15rem;
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    font-size: 0.9rem;
+}
+
+.erp-password-links a {
+    color: var(--color-primary-blue);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.erp-password-links a:hover {
+    text-decoration: underline;
+}
+
 .erp-auth-form button {
     margin-top: 0.4rem;
     border: none;

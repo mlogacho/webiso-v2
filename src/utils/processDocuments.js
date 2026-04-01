@@ -84,6 +84,8 @@ export const saveDocuments = async ({ processName, docType, files, standards }) 
     const uploadedFiles = Array.from(files || []);
     if (!uploadedFiles.length) throw new Error('Debes seleccionar al menos un archivo.');
 
+    const notifiedEmailsSet = new Set();
+
     for (const file of uploadedFiles) {
         const formData = new FormData();
         formData.append('file',         file);
@@ -95,9 +97,14 @@ export const saveDocuments = async ({ processName, docType, files, standards }) 
 
         const response = await fetch(API_BASE, { method: 'POST', body: formData });
         await checkResponse(response);
+        const data = await response.json();
+        if (data.notifiedEmails && Array.isArray(data.notifiedEmails)) {
+            data.notifiedEmails.forEach(e => notifiedEmailsSet.add(e));
+        }
     }
 
     emitDocumentsUpdated();
+    return Array.from(notifiedEmailsSet);
 };
 
 export const updateDocumentStandards = async (documentId, standards) => {

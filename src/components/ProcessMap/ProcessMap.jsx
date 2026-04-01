@@ -113,7 +113,7 @@ const ProcessMap = () => {
         }
 
         try {
-            await saveDocuments({
+            const notifiedEmails = await saveDocuments({
                 processName: selectedProcess,
                 docType,
                 files: currentState.files,
@@ -128,6 +128,12 @@ const ProcessMap = () => {
                 }
             }));
             setFeedback(`${getDocumentTypeLabel(docType)} guardado correctamente.`);
+            
+            if (notifiedEmails && notifiedEmails.length > 0) {
+                window.alert(`¡Envío exitoso!\n\nSe enviaron correos de notificación a los siguientes usuarios:\n${notifiedEmails.join('\\n')}`);
+            } else {
+                window.alert(`El documento fue guardado, pero no se enviaron notificaciones por correo.`);
+            }
         } catch (error) {
             setFeedback(error.message || 'No fue posible guardar el documento.');
         }

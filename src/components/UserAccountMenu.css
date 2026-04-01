@@ -1,0 +1,147 @@
+.user-account-menu {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.account-toggle-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: none;
+    border: none;
+    color: #333;
+    cursor: pointer;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.account-toggle-btn:hover {
+    background-color: #f0f0f0;
+    color: #667eea;
+}
+
+.user-name {
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.account-dropdown {
+    position: absolute;
+    top: calc(100% + 0.5rem);
+    right: 0;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    min-width: 240px;
+    z-index: 1000;
+    overflow: hidden;
+}
+
+.account-header {
+    padding: 1rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.user-info {
+    margin: 0;
+}
+
+.user-display-name {
+    font-weight: 600;
+    margin: 0 0 0.25rem 0;
+    font-size: 0.95rem;
+}
+
+.user-email {
+    font-size: 0.85rem;
+    opacity: 0.9;
+    margin: 0;
+    word-break: break-word;
+}
+
+.account-divider {
+    height: 1px;
+    background-color: #e0e0e0;
+}
+
+.account-menu-items {
+    display: flex;
+    flex-direction: column;
+}
+
+.account-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border: none;
+    background: none;
+    color: #333;
+    cursor: pointer;
+    text-align: left;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    text-decoration: none;
+}
+
+.account-menu-item:hover {
+    background-color: #f5f5f5;
+    color: #667eea;
+}
+
+.account-menu-item svg {
+    flex-shrink: 0;
+}
+
+.account-menu-item.logout {
+    color: #c33;
+}
+
+.account-menu-item.logout:hover {
+    background-color: #fee;
+    color: #900;
+}
+
+.account-menu-item.settings {
+    color: #666;
+}
+
+.account-menu-item.settings:hover {
+    color: #667eea;
+}
+
+.account-menu-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 999;
+}
+
+@media (max-width: 600px) {
+    .account-dropdown {
+        position: fixed;
+        top: auto;
+        right: 1rem;
+        left: 1rem;
+        bottom: auto;
+        max-width: none;
+        border-radius: 0;
+    }
+
+    .user-name {
+        display: none;
+    }
+
+    .account-toggle-btn {
+        padding: 0.5rem;
+    }
+}
