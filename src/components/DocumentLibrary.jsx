@@ -109,24 +109,24 @@ const DocumentLibrary = ({ standardId, title, description }) => {
                         const Icon = fileIconFor(document.docType);
                         return (
                             <article key={document.id} className="document-library__card">
-                                <div className="document-library__card-top">
-                                    <div className="document-library__icon"><Icon size={20} /></div>
-                                    <div>
-                                        <h3>{document.fileName}</h3>
-                                        <p>{document.processName}</p>
+                                <div className="document-library__card-left">
+                                    <div className="document-library__icon"><Icon size={18} /></div>
+                                    <div className="document-library__card-info">
+                                        <h3 className="document-library__card-title">{document.fileName}</h3>
+                                        <span className="document-library__card-process">{document.processName}</span>
                                     </div>
                                 </div>
-
-                                <div className="document-library__meta">
-                                    <span>{getDocumentTypeLabel(document.docType)}</span>
-                                    <span>{formatFileSize(document.size)}</span>
-                                    <span>{formatDateTime(document.uploadedAt)}</span>
+                                <div className="document-library__card-right">
+                                    <div className="document-library__meta">
+                                        <span>{getDocumentTypeLabel(document.docType)}</span>
+                                        <span>{formatFileSize(document.size)}</span>
+                                        <span>{formatDateTime(document.uploadedAt)}</span>
+                                    </div>
+                                    <button type="button" onClick={() => openDocument(document)} className="document-library__open-btn">
+                                        <Download size={16} />
+                                        Abrir documento
+                                    </button>
                                 </div>
-
-                                <button type="button" onClick={() => openDocument(document)} className="document-library__open-btn">
-                                    <Download size={16} />
-                                    Abrir documento
-                                </button>
                             </article>
                         );
                     })}
