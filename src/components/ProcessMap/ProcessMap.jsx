@@ -112,6 +112,13 @@ const ProcessMap = () => {
             return;
         }
 
+        const existingNames = documents.map((d) => d.fileName.trim().toLowerCase());
+        const duplicates = currentState.files.filter((f) => existingNames.includes(f.name.trim().toLowerCase()));
+        if (duplicates.length > 0) {
+            setFeedback(`Ya existe un documento con ese nombre: ${duplicates.map((f) => f.name).join(', ')}. Elimínalo primero si deseas reemplazarlo.`);
+            return;
+        }
+
         try {
             const notifiedEmails = await saveDocuments({
                 processName: selectedProcess,
