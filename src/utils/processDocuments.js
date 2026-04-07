@@ -30,9 +30,9 @@ export const DOCUMENT_TYPES = [
     {
         id: 'complementary-doc',
         label: 'Documentos Complementarios al Proceso',
-        accept: 'application/pdf,.pdf,.doc,.docx,.xlsx,.xls,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        accept: 'application/pdf,.pdf,.doc,.docx,.xlsx,.xls,.pptx,.ppt,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.ms-powerpoint',
         multiple: true,
-        description: 'Se pueden cargar varios documentos complementarios al proceso (PDF, Word, Excel).'
+        description: 'Se pueden cargar varios documentos complementarios al proceso (PDF, Word, Excel, PowerPoint).'
     }
 ];
 
