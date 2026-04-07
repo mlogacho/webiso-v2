@@ -188,9 +188,11 @@ def _send_document_notification(doc_info):
         logger.warning("DEBUG: No hay usuarios de CRM configurados para notificar.")
         return []
 
-    # Usamos la fecha y hora exacta de subida almacenada en 'uploadedAt'
+    # Usamos la fecha y hora exacta de subida almacenada en 'uploadedAt' (convertida a UTC-5 Quito)
     upload_date = datetime.fromisoformat(doc_info['uploadedAt'].replace('Z', '+00:00')) if isinstance(doc_info['uploadedAt'], str) else doc_info['uploadedAt']
-    upload_datetime_str = upload_date.strftime("%d/%m/%Y a las %H:%M:%S (UTC)")
+    quito_tz = timezone(timedelta(hours=-5))
+    upload_date_quito = upload_date.astimezone(quito_tz)
+    upload_datetime_str = upload_date_quito.strftime("%d/%m/%Y a las %H:%M:%S (UTC-5)")
 
     subject = f"Nuevo Documento en WebISO: {doc_info['fileName']}"
     notified_emails = []
