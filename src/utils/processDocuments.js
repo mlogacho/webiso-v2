@@ -61,7 +61,7 @@ const checkResponse = async (response) => {
 // ── Queries ──────────────────────────────────────────────────────────────────
 
 export const getAllDocuments = async () => {
-    const response = await fetch(API_BASE);
+    const response = await fetch(API_BASE, { cache: 'no-store' });
     await checkResponse(response);
     return response.json();
 };

@@ -36,7 +36,11 @@ const DocumentLibrary = ({ standardId, title, description }) => {
         loadDocuments();
         const handleUpdate = () => loadDocuments();
         window.addEventListener(processDocumentsUpdatedEvent, handleUpdate);
-        return () => window.removeEventListener(processDocumentsUpdatedEvent, handleUpdate);
+        const interval = setInterval(loadDocuments, 30000);
+        return () => {
+            window.removeEventListener(processDocumentsUpdatedEvent, handleUpdate);
+            clearInterval(interval);
+        };
     }, [loadDocuments]);
 
     const processOptions = React.useMemo(() => Array.from(new Set(documents.map((document) => document.processName))).sort(), [documents]);
