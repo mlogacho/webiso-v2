@@ -69,8 +69,7 @@ const ERPDataCom = () => {
             description: 'Registro y seguimiento de actas, compromisos y acuerdos de reuniones.',
             url: 'http://10.11.121.58:8030',
             icon: <ClipboardList size={48} />,
-            colorClass: 'card-green',
-            directLink: true
+            colorClass: 'card-green'
         }
     ];
 
@@ -192,12 +191,7 @@ const ERPDataCom = () => {
         }
     };
 
-    const handleCardClick = (event, appUrl, appId, directLink = false) => {
-        if (directLink) {
-            window.open(appUrl, '_blank', 'noopener,noreferrer');
-            return;
-        }
-
+    const handleCardClick = (event, appUrl, appId) => {
         if (!authToken) {
             event.preventDefault();
             setError('Debes iniciar sesion primero para abrir aplicaciones ERP.');
@@ -248,12 +242,12 @@ const ERPDataCom = () => {
 
             <div className="erp-grid">
                 {apps.map((app) => {
-                    const disabled = authToken && !app.directLink && !hasPermission(app.id);
+                    const disabled = authToken && !hasPermission(app.id);
                     return (
                         <button
                             key={app.id}
                             type="button"
-                            onClick={(event) => handleCardClick(event, app.url, app.id, app.directLink)}
+                            onClick={(event) => handleCardClick(event, app.url, app.id)}
                             className={`erp-card ${app.colorClass} ${disabled ? 'erp-card-disabled' : ''}`}
                         >
                             <div className="card-icon-wrapper">
