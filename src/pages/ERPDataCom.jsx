@@ -193,6 +193,11 @@ const ERPDataCom = () => {
     };
 
     const handleCardClick = (event, appUrl, appId, directLink = false) => {
+        if (directLink) {
+            window.open(appUrl, '_blank', 'noopener,noreferrer');
+            return;
+        }
+
         if (!authToken) {
             event.preventDefault();
             setError('Debes iniciar sesion primero para abrir aplicaciones ERP.');
@@ -202,11 +207,6 @@ const ERPDataCom = () => {
         if (!hasPermission(appId)) {
             event.preventDefault();
             setError('Tu rol no tiene permisos para esta aplicacion.');
-            return;
-        }
-
-        if (directLink) {
-            window.open(appUrl, '_blank', 'noopener,noreferrer');
             return;
         }
 
@@ -248,7 +248,7 @@ const ERPDataCom = () => {
 
             <div className="erp-grid">
                 {apps.map((app) => {
-                    const disabled = authToken && !hasPermission(app.id);
+                    const disabled = authToken && !app.directLink && !hasPermission(app.id);
                     return (
                         <button
                             key={app.id}
