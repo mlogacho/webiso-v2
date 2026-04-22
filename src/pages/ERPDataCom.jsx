@@ -67,10 +67,9 @@ const ERPDataCom = () => {
             id: 'erp_acta',
             name: 'ACTA DE REUNIONES',
             description: 'Registro y seguimiento de actas, compromisos y acuerdos de reuniones.',
-            url: 'http://10.11.121.58:8030',
+            url: 'http://10.11.121.58:8030/login',
             icon: <ClipboardList size={48} />,
-            colorClass: 'card-green',
-            directLink: true
+            colorClass: 'card-green'
         }
     ];
 
